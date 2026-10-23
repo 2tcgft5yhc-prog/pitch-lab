@@ -94,6 +94,10 @@ canvas.chart{width:100%;height:260px;display:block}
 .guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;font-size:.86rem}
 .guide div{border-top:2px solid var(--line);padding-top:8px}
 .guide b{display:block;font-family:var(--f-display);font-size:1.05rem}
+.shootcheck{display:flex;flex-direction:column;gap:6px}
+.shootcheck div,.hint{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:6px;padding:8px 10px;font-size:.85rem;background:var(--warn-bg);color:var(--ink)}
+.shootcheck div.ok{border-left-color:var(--good);background:var(--good-bg)}
+.hint{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .consent{border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
 .consent h3{margin:0;font-size:1rem}
 .consent ol{margin:0;padding-left:1.3em;font-size:.86rem;max-width:75ch;display:flex;flex-direction:column;gap:4px}
@@ -128,7 +132,8 @@ canvas.chart{width:100%;height:260px;display:block}
     <label class="f">投手身高（公分）
       <input id="height" type="number" value="178" min="120" max="220" style="width:90px"></label>
   </div>
-  <p class="note">慢動作倍率說明：手機用 240fps 拍攝、檔案以 30fps 播放時選 8×。若檔案本身就是 240fps 正常速度播放，請選 1×，並把「影片檔案 fps」設為 240。倍率選錯，時間和球速都會跟著算錯。</p>
+  <p class="note">慢動作倍率說明：手機用 240fps 拍攝、檔案以 30fps 播放時選 8×。若檔案本身就是 240fps 正常速度播放，請選 1×，並把「影片檔案 fps」設為 240。倍率選錯，時間和球速都會跟著算錯。分析完成後，系統會依手腕速度自動檢查倍率是否合理。</p>
+  <div id="slowHint"></div>
 </section>
 
 <div class="grid2">
@@ -144,6 +149,7 @@ canvas.chart{width:100%;height:260px;display:block}
     <div class="row"><button class="primary" data-act="analyze" disabled>分析骨架</button><span class="status" data-k="msg"></span></div>
     <div class="prog"><i></i></div>
     <div class="events"></div>
+    <div class="shootcheck"></div>
   </section>
 
   <section class="panel vcard" id="card-prac">
@@ -158,6 +164,7 @@ canvas.chart{width:100%;height:260px;display:block}
     <div class="row"><button class="primary" data-act="analyze" disabled>分析骨架</button><span class="status" data-k="msg"></span></div>
     <div class="prog"><i></i></div>
     <div class="events"></div>
+    <div class="shootcheck"></div>
   </section>
 </div>
 
@@ -990,9 +997,51 @@ async function aiEvents(card){
 }
 /* ---------- 啟動 ---------- */
 const R=new Card("ref","--ref"), P=new Card("prac","--prac");
-function onDataChange(){ computeAlign(); setupSync(); renderAlign(); report(); chart(); updateSpeed(); renderQuality(); }
+function onDataChange(){ computeAlign(); setupSync(); renderAlign(); report(); chart(); updateSpeed(); renderQuality(); renderSlowHint(); renderShootChecks(); }
 $("#hand").addEventListener("change",()=>{ [R,P].forEach(c=>{ if(c.frames){ c.ruleEvents=detectEvents(c.frames); if(c.eventSource!=="ai"){ c.events={...c.ruleEvents}; c.autoEvents={...c.events}; c.corrections=[]; } else c.events.dir=c.ruleEvents.dir; c.renderEvents(); } c.draw(); }); onDataChange(); });
-$("#slow").addEventListener("change",onDataChange);
+$("#slow").addEventListener("change",()=>reanalyzeAI());
+async function reanalyzeAI(){
+  for(const c of [R,P]){
+    if(!c.frames) continue;
+    c.ruleEvents=detectEvents(c.frames); c.events={...c.ruleEvents}; c.eventSource="rule";
+    try{ c.events=await aiEvents(c); c.eventSource="ai"; }catch(e){ console.error(e); }
+    try{ c.aiAng=await aiAngles(c); }catch(e){ c.aiAng=null; }
+    c.autoEvents={...c.events}; c.corrections=[]; c.renderEvents();
+  }
+  onDataChange();
+}
+/* ---------- 拍攝檢查 ---------- */
+function wristSpeedVideo(c){ // 投球手腕速度第 95 百分位（像素／影片秒）
+  const I=idx(), F=c.frames, v=[];
+  for(let i=1;i<F.length;i++){ const dt=F[i].t-F[i-1].t; if(dt>0) v.push(Math.hypot(F[i].lm[I.wr].x-F[i-1].lm[I.wr].x, F[i].lm[I.wr].y-F[i-1].lm[I.wr].y)/dt); }
+  v.sort((a,b)=>a-b); return v[Math.floor(v.length*0.95)]||0;
+}
+function speedMs(c, slow){ return wristSpeedVideo(c)*slow*(setting.height/100)/(c.hpx||1); }
+function renderSlowHint(){
+  const box=$("#slowHint"), cards=[R,P].filter(c=>c.frames&&c.hpx);
+  if(!cards.length){ box.innerHTML=""; return; }
+  const cur=setting.slow, sp=cards.map(c=>speedMs(c,cur)), avg=sp.reduce((a,b)=>a+b,0)/sp.length;
+  if(avg>=10 && avg<=40){ box.innerHTML=""; return; }
+  const best=[1,2,4,8].reduce((b,f)=>Math.abs(Math.log(cards.map(c=>speedMs(c,f)).reduce((a,x)=>a+x,0)/cards.length/22))<Math.abs(Math.log(cards.map(c=>speedMs(c,b)).reduce((a,x)=>a+x,0)/cards.length/22))?f:b,1);
+  if(best===cur){ box.innerHTML=""; return; }
+  const bs=cards.map(c=>speedMs(c,best)).reduce((a,x)=>a+x,0)/cards.length;
+  box.innerHTML=`<div class="hint"><span>⚠️ 以目前的 ${cur}× 計算，投球手腕最快速度約 <b>${avg.toFixed(0)} m/s</b>，不合理（一般約 15–30 m/s）。改成 <b>${best}×</b> 則約 ${bs.toFixed(0)} m/s。iPhone 從相簿選慢動作影片時，常會被轉成一般速度。</span><button id="useSlow">改用 ${best}× 重新分析</button></div>`;
+  $("#useSlow").onclick=()=>{ $("#slow").value=String(best); reanalyzeAI(); };
+}
+function renderShootChecks(){
+  for(const c of [R,P]){
+    const box=$(".shootcheck",c.root); if(!c.frames){ box.innerHTML=""; continue; }
+    const W=c.video.videoWidth||1, H=c.video.videoHeight||1, E=c.events, items=[];
+    const a=Math.min(E.kh,E.fc,E.br), b=Math.max(E.kh,E.fc,E.br);
+    const J=[11,12,13,14,15,16,23,24,25,26,27,28]; let out=0, n=0;
+    for(let i=Math.max(0,a-5);i<=Math.min(c.frames.length-1,b+8);i++){ n++; if(J.some(j=>{ const p=c.frames[i].lm[j]; return p.x<0||p.x>W||p.y<0||p.y>H; })) out++; }
+    if(n && out/n>0.1) items.push(`投球過程中有 ${Math.round(out/n*100)}% 的畫面，身體或手臂超出畫面。${H>W?"建議手機橫拿，":""}站遠一點，讓全身和出手後的手臂都入鏡。`);
+    const f=c.frames[E.fc]?.lm; if(f){ const sw=Math.hypot(f[11].x-f[12].x,f[11].y-f[12].y), tl=Math.hypot((f[11].x+f[12].x-f[23].x-f[24].x)/2,(f[11].y+f[12].y-f[23].y-f[24].y)/2);
+      if(tl>0 && sw/tl>0.5) items.push("前腳落地時肩膀看起來很寬，鏡頭可能不是正側面。請從投球手的另一側（右投從三壘側）、和投球方向垂直的位置拍攝，兩支影片的角度要相同。"); }
+    const q=quality(c); if(!q.checks.boneStability) items.push("骨架抖動較大，可能是光線不足、手持晃動或動作模糊。建議用腳架、在明亮處拍攝。");
+    box.innerHTML=items.length?items.map(t=>`<div>${t}</div>`).join(""):(c.frames?`<div class="ok">拍攝檢查通過。</div>`:"");
+  }
+}
 chart();
 </script>
 </body>
