@@ -188,6 +188,34 @@ details[open].adv>summary::after,.more details[open]>summary::after{transform:ro
 .trim .box{display:flex;flex-direction:column;gap:10px;padding:4px 0 8px}
 .trim input[type=range]{width:100%;accent-color:var(--chalk)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pitches{display:flex;flex-direction:column;gap:10px}
+.slot:not([data-state="done"]) .pitches{display:none}
+.pitches .ph{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0;font-size:13px;color:var(--chalk-2)}
+.pitches .ph b{color:var(--chalk);font-size:17px}
+.pstrip{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.pcard{position:relative;border:0;padding:0;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:3/4;opacity:.5;transition:opacity .25s,transform .2s var(--ease-out)}
+.pcard img{width:100%;height:100%;object-fit:cover;display:block}
+.pcard::after{content:"";position:absolute;inset:0;border-radius:14px;box-shadow:inset 0 0 0 1.5px var(--rule-2);transition:box-shadow .25s}
+.pcard.on{opacity:1} .pcard.on::after{box-shadow:inset 0 0 0 2.5px var(--chalk)}
+.pcard:active{transform:scale(.96)}
+.pcard span{position:absolute;left:6px;bottom:6px;font-size:12px;font-weight:700;background:rgba(14,21,17,.82);padding:1px 8px;border-radius:999px}
+.pcard i{position:absolute;right:6px;top:6px;width:24px;height:24px;border-radius:50%;border:2px solid rgba(241,237,226,.7);background:rgba(14,21,17,.5);display:grid;place-items:center;color:transparent;transition:background .2s,color .2s}
+.pcard i svg{width:14px;height:14px}
+.pcard.on i{background:var(--chalk);border-color:var(--chalk);color:var(--turf)}
+.pmsg{margin:0;font-size:13px;color:var(--amber)} .pmsg:empty{display:none}
+.mompitch{margin-top:18px;display:flex;flex-direction:column;gap:8px} .mompitch:empty{display:none}
+.pitchbar{margin:2px 0 18px;overflow-x:auto;scrollbar-width:none} .pitchbar::-webkit-scrollbar{display:none}
+.pitchbar .seg button{min-height:42px;padding:0 16px;white-space:nowrap}
+.consist{margin-top:26px;display:flex;flex-direction:column;gap:4px}
+.consist h3{font-size:19px}
+.crow{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:14px 0 10px;border-bottom:1px solid var(--rule);align-items:center}
+.crow .cn{font-size:15px;font-weight:700} .crow .cs{font-size:13px;color:var(--chalk-2);display:flex;gap:8px;align-items:center;white-space:nowrap}
+.ctrack{grid-column:1/-1;position:relative}
+.czone{position:absolute;top:12px;height:12px;border-radius:6px;background:var(--ok-dim);box-shadow:inset 0 0 0 1px rgba(126,224,161,.35)}
+.cmid{position:absolute;left:50%;top:6px;width:2px;height:24px;margin-left:-1px;background:var(--ok);opacity:.7;border-radius:1px}
+.cdot{position:absolute;width:22px;height:22px;margin-left:-11px;border-radius:50%;display:grid;place-items:center;font:800 13px/1 var(--f-num);color:var(--turf);background:var(--chalk);box-shadow:0 0 0 3px var(--turf)}
+.cdot.y{background:var(--amber)} .cdot.r{background:var(--seam);color:#fff}
+.cax{font-size:11px;color:var(--chalk-3)}
 
 /* ---------- 時間點 ---------- */
 .moments{margin-top:24px;display:grid;grid-template-columns:auto 1fr 1fr;gap:10px 10px;align-items:center}
@@ -416,6 +444,7 @@ dialog.sheet::backdrop{background:rgba(5,8,6,.66);backdrop-filter:blur(2px)}
       <header><span class="tag">A</span><div><h3 id="slotH-ref">標準</h3><p>你最好的一球，當作比較的基準</p></div><span class="st"><i></i><span class="stt">等待影片</span></span></header>
       <label class="pick"><input type="file" accept="video/*" aria-label="選擇標準影片"><span class="plus" aria-hidden="true">+</span><b>選擇標準影片</b><small>從相簿選側面拍攝的影片，慢動作更準</small></label>
       <div class="stage"><video playsinline muted preload="auto"></video><button class="tap" aria-label="播放或暫停"></button><canvas class="ov"></canvas></div>
+      <div class="pitches" hidden></div>
       <div class="seamrow"><svg class="seam" aria-hidden="true"></svg><p class="narr" aria-live="polite"><span class="nt"></span><b class="np"></b></p></div>
       <div class="errbox" role="alert"></div>
       <ul class="lights" aria-label="拍攝檢查"></ul><ul class="fixes"></ul>
@@ -432,6 +461,7 @@ dialog.sheet::backdrop{background:rgba(5,8,6,.66);backdrop-filter:blur(2px)}
       <header><span class="tag">B</span><div><h3 id="slotH-prac">練習</h3><p>今天拍的這一球，位置要和標準相同</p></div><span class="st"><i></i><span class="stt">等待影片</span></span></header>
       <label class="pick"><input type="file" accept="video/*" aria-label="選擇練習影片"><span class="plus" aria-hidden="true">+</span><b>選擇練習影片</b><small>從相簿選側面拍攝的影片，慢動作更準</small></label>
       <div class="stage"><video playsinline muted preload="auto"></video><button class="tap" aria-label="播放或暫停"></button><canvas class="ov"></canvas></div>
+      <div class="pitches" hidden></div>
       <div class="seamrow"><svg class="seam" aria-hidden="true"></svg><p class="narr" aria-live="polite"><span class="nt"></span><b class="np"></b></p></div>
       <div class="errbox" role="alert"></div>
       <ul class="lights" aria-label="拍攝檢查"></ul><ul class="fixes"></ul>
@@ -452,12 +482,14 @@ dialog.sheet::backdrop{background:rgba(5,8,6,.66);backdrop-filter:blur(2px)}
 <section class="screen" id="sc-moments" data-step="3" aria-labelledby="momH">
   <h2 id="momH">三個瞬間對上了嗎</h2>
   <p class="lead">AI 在兩支影片各找了三個瞬間，兩邊應該是同一個動作。不一樣的話，點畫面修正。</p>
+  <div class="mompitch" id="momPitch"></div>
   <div class="moments" id="moments"></div>
   <div class="dock"><div class="dock-in"><p class="why" id="momWhy"></p><button class="cta" data-go="4" id="toResult">看比對結果</button></div></div>
 </section>
 
 <!-- 4 結果 -->
 <section class="screen" id="sc-result" data-step="4" aria-labelledby="vHead">
+  <div class="pitchbar" id="pitchBar" hidden></div>
   <div class="verdict">
     <p class="k" id="vKicker">和標準相比</p>
     <h2 id="vHead">—</h2>
@@ -465,8 +497,10 @@ dialog.sheet::backdrop{background:rgba(5,8,6,.66);backdrop-filter:blur(2px)}
     <ol class="phases" id="phases"></ol>
   </div>
   <div id="banners"></div>
+  <section class="consist" id="consist" hidden aria-label="每一球的穩定度"></section>
   <div class="res-grid">
     <div class="player" aria-label="對照播放">
+      <p class="note" id="playNote" hidden></p>
       <div class="screenwrap" id="screenwrap"><canvas id="cmpL" aria-label="標準影片"></canvas><canvas id="cmpR" aria-label="練習影片"></canvas></div>
       <div class="legend" id="legend"><span><i class="c"></i>練習</span><span><i class="g"></i>標準的殘影</span><span><i class="r"></i>角度差超過容許範圍</span></div>
       <div class="transport">
@@ -755,7 +789,7 @@ function go(n, opts={}){
   if(n>=1) prefetch();
   if(n===2 && !store.get("guideSeen",false)){ store.set("guideSeen",true); setTimeout(()=>openSheet("guide"),350); }
   if(n===3) renderMoments();
-  if(n===4){ setupSync(); requestAnimationFrame(()=>{ drawCmp(); chart(); }); }
+  if(n===4){ onDataChange(); requestAnimationFrame(()=>{ drawCmp(); chart(); }); }
 }
 window.addEventListener("popstate",e=>go(e.state?.step??0,{fromPop:true}));
 $("#back").addEventListener("click",()=>{ if(history.state?.step>0) history.back(); else go(step-1); });
@@ -818,8 +852,8 @@ function onHeightChange(){
   clearTimeout(heightTimer);
   heightTimer=setTimeout(()=>{ if(R.frames||P.frames){ updateSpeed(); autoSlowCheck(false).then(ch=>{ if(!ch) onDataChange(); }); } },500);
 }
-function onHandChange(){
-  [R,P].forEach(c=>{ if(c.frames){ c.ruleEvents=detectEvents(c.frames); if(c.eventSource!=="ai"){ c.events={...c.ruleEvents}; c.autoEvents={...c.events}; c.corrections=[]; } else c.events.dir=c.ruleEvents.dir; } c.draw(); });
+async function onHandChange(){
+  for(const c of [R,P]){ if(c.pitches) await analyzePitches(c); c.draw(); }
   if(R.frames||P.frames) onDataChange();
 }
 
@@ -865,7 +899,7 @@ class Card{
     if(file.type && !file.type.startsWith("video/")){ this.fail("這不是影片檔，請選擇投球影片。"); return; }
     if(this.url) URL.revokeObjectURL(this.url);
     this.url=URL.createObjectURL(file);
-    this.gen=(this.gen||0)+1; this.frames=null; this.rawFrames=null; this.events=null; this.autoEvents=null; this.corrections=[]; this.calib=[]; this.ball=[]; this.hpx=null; this.live=null; this.aiAng=null; this.lights=[]; this.fixes=[];
+    this.gen=(this.gen||0)+1; this.frames=null; this.rawFrames=null; this.allFrames=null; this.allRaw=null; this.pitches=null; this.pi=null; this.offset=0; this.span=null; this.events=null; this.autoEvents=null; this.corrections=[]; this.calib=[]; this.ball=[]; this.hpx=null; this.live=null; this.aiAng=null; this.lights=[]; this.fixes=[];
     this.fileName=file.name; this.fileSize=file.size; $(".errbox",this.root).innerHTML="";
     this.setState("queued"); this.narr("讀取影片中…"); this.prog(0);
     this.video.src=this.url;
@@ -970,14 +1004,9 @@ class Card{
       this.frames=smooth(frames);
       this.hpx=estHeightPx(this.frames);
       if($("#slow").value==="auto") AUTO.slow=pickSlow([R,P].filter(c=>c===this||(c.frames&&c.hpx)));
-      this.ruleEvents=detectEvents(this.frames);
-      this.events={...this.ruleEvents}; this.eventSource="rule"; this.aiError=null;
-      try{ this.events=await aiEvents(this); this.eventSource="ai"; }
-      catch(e){ console.error(e); this.aiError=String(e.message||e); }
-      this.aiAng=null;
-      try{ this.aiAng=await aiAngles(this); }catch(e){ console.error(e); }
-      this.aiSlow=setting.slow;
-      this.autoEvents={...this.events}; this.corrections=[];
+      this.allFrames=null; this.allRaw=null; this.pitches=null; this.pi=null;
+      this.narr("找出每一球的抬腿、落地、出手…","100%");
+      await analyzePitches(this);
       await refreshStaleAI();   // 加入這支影片後倍率可能改變，另一支要用新倍率重算
       this.live=null; this.setState("done");
       this.narr("");
@@ -990,6 +1019,15 @@ class Card{
     while(hi-lo>1){const m=(lo+hi)>>1; if(f[m].t<t) lo=m; else hi=m;}
     return Math.abs(f[lo].t-t)<=Math.abs(f[hi].t-t)?lo:hi; }
   renderEvents(){ if(step===3) renderMoments(); }
+  usePitch(i){
+    if(this.pi!=null && this.pi>=0) this.save();
+    const p=this.pitches[i]; this.pi=i;
+    Object.assign(this,{frames:p.frames,rawFrames:p.rawFrames,events:p.events,autoEvents:p.autoEvents,ruleEvents:p.ruleEvents,aiAng:p.aiAng,eventSource:p.eventSource,aiError:p.aiError,corrections:p.corrections,offset:p.a});
+    this.span=[p.frames[0].t,p.frames.at(-1).t];
+  }
+  save(){ const p=this.pitches?.[this.pi]; if(!p||p.frames!==this.frames) return;
+    Object.assign(p,{events:this.events,autoEvents:this.autoEvents,ruleEvents:this.ruleEvents,aiAng:this.aiAng,eventSource:this.eventSource,aiError:this.aiError,corrections:this.corrections}); }
+  get included(){ return this.pitches?this.pitches.map((p,k)=>p.include?k:-1).filter(k=>k>=0):[]; }
   click(e){
     const r=this.canvas.getBoundingClientRect();
     const x=(e.clientX-r.left)/r.width*this.video.videoWidth, y=(e.clientY-r.top)/r.height*this.video.videoHeight;
@@ -1004,7 +1042,7 @@ class Card{
     const col=css(this.colorVar), lw=Math.max(2,this.video.videoWidth/300);
     let f=null;
     if(this.live) f=this.live;
-    else if(this.frames){ const i=this.nearest(this.video.currentTime); if(i>=0 && Math.abs(this.frames[i].t-this.video.currentTime)<0.2) f=this.frames[i]; }
+    else if(this.frames){ const A=this.allFrames||this.frames, i=nearestIn(A,this.video.currentTime); if(i>=0 && Math.abs(A[i].t-this.video.currentTime)<0.2) f=A[i]; }
     if(f){
       const p=f.lm, I=idx(); g.lineWidth=lw; g.strokeStyle=col; g.lineCap="round";
       if(this.live){ g.shadowColor=col; g.shadowBlur=lw*4; }
@@ -1317,8 +1355,8 @@ function unwarpT(tp){ // 練習影片真實時間 → 標準影片真實時間�
 const VIEW_2D_ONLY=new Set(["stride","sep"]);   // 只能從 2D 畫面量、斜拍就不準的項目
 function viewRatio(c){ const f=c.frames[c.events.fc].lm, sw=Math.hypot(f[11].x-f[12].x,f[11].y-f[12].y), tl=Math.hypot((f[11].x+f[12].x-f[23].x-f[24].x)/2,(f[11].y+f[12].y-f[23].y-f[24].y)/2); return tl?sw/tl:NaN; }
 const isSide=c=>!(viewRatio(c)>0.5);
-function buildReport(){
-  const mr=metrics(R), mp=metrics(P), rows=[], probs=[], side=isSide(R)&&isSide(P);
+function buildReport(multi){
+  const mr=metrics(R), mp=multi?multi.mean:metrics(P), rows=[], probs=[], side=isSide(R)&&(multi?multi.side:isSide(P));
   for(const d of DEFS){
     const a=mr[d.k], b=mp[d.k], diff=b-a;
     let st="g", txt="良好", safety=false;
@@ -1328,14 +1366,15 @@ function buildReport(){
     else if(Math.abs(diff)>d.tol){ st="y"; txt="可調整"; }
     if(d.k==="abdFC" && (b<75 || mp.elbowRel<-4)){ st="r"; txt="安全警示"; safety=true; }
     if(d.k==="block" && b<-3){ st="r"; txt="安全警示"; safety=true; }
-    rows.push({d,a,b,diff,st,txt,safety});
+    const per=multi?multi.list.map(m=>m.m[d.k]-a):null;
+    rows.push({d,a,b,diff,st,txt,safety,per});
     if(st==="y"||st==="r"){
       const c=(safety||diff<0)?d.lo:d.hi;
-      probs.push({score:(safety?1000:0)+(st==="r"?100:0)+(relOf(d).startsWith("低")?-50:0)+Math.abs(diff)/d.tol, st, c, d, diff, a, b, safety, txt});
+      probs.push({score:(safety?1000:0)+(st==="r"?100:0)+(relOf(d).startsWith("低")?-50:0)+Math.abs(diff)/d.tol, st, c, d, diff, a, b, safety, txt, per});
     }
   }
   probs.sort((x,y)=>y.score-x.score);
-  const rr=viewRatio(R), rp=viewRatio(P);
+  const rr=viewRatio(R), rp=multi?multi.ratio:viewRatio(P);
   return {rows, probs, view:{rr,rp,side,bad:isFinite(rr)&&isFinite(rp)&&Math.abs(rr-rp)>0.25}};
 }
 const unitSuffix=u=>u==="°"?"°":u==="ms"?" ms":u.startsWith("%")?"%":"";
@@ -1353,17 +1392,17 @@ function arcSVG(a,b){   // 小圖：標準（藍）與練習（白）的角度
 function report(){
   const tb=$("#tbody"), is=$("#issues");
   if(!(R.frames&&P.frames)){ is.innerHTML=""; tb.innerHTML=""; $("#vHead").textContent="—"; $("#vNum").innerHTML=""; $("#phases").innerHTML=""; $("#banners").innerHTML=""; return; }
-  const {rows,probs,view}=buildReport();
+  const multi=PV_MULTI(), {rows,probs,view}=buildReport(multi); renderPitchBar(); renderConsist(multi,rows);
   tb.innerHTML=rows.map(r=>`<tr><td>${r.d.name}</td><td>${r.d.phase}</td><td class="n">${fmt(r.a,r.d.unit)}</td><td class="n">${fmt(r.b,r.d.unit)}</td>
       <td class="n">${fmtDiff(r.diff,r.d.unit)} <small style="font:12px var(--f-body);color:var(--chalk-3)">${r.d.unit}</small></td><td>${r.st?`<span class="pill ${r.st}">${r.txt}</span>`:r.txt}</td><td class="rel">${relOf(r.d)}</td></tr>`).join("");
   // 結論
   const top=probs[0], nOk=rows.filter(r=>r.st==="g").length;
   if(!top){
-    $("#vKicker").textContent="和標準相比";
+    $("#vKicker").textContent=(multi?`${multi.list.length} 球平均，`:PV_LABEL())+"和標準相比";
     $("#vHead").textContent="動作和標準幾乎一樣";
     $("#vNum").className="vnum ok"; $("#vNum").innerHTML=`<b>${nOk}/${rows.filter(r=>r.st).length}</b><span>項都在容許範圍內，維持目前的動作。</span>`;
   } else {
-    $("#vKicker").textContent=top.safety?"先處理這一項，和受傷風險有關":"最需要調整的是";
+    $("#vKicker").textContent=(multi?`${multi.list.length} 球平均，`:PV_LABEL())+(top.safety?"先處理這一項，和受傷風險有關":"最需要調整的是");
     $("#vHead").textContent=top.c[0];
     $("#vNum").className="vnum "+(top.st==="r"?"bad":"warn");
     const others=probs.length-1;
@@ -1383,7 +1422,7 @@ function report(){
   is.innerHTML = probs.length ? probs.map((p,i)=>{
     const deg=p.d.unit==="°", us=unitSuffix(p.d.unit);
     return `<article class="issue ${p.st}"><span class="tg">${p.safety?"安全警示":p.txt}　${p.d.phase}</span><h4>${p.c[0]}</h4>
-      <div class="metric">${ARC_OK.has(p.d.k)&&isFinite(p.a)&&isFinite(p.b)?arcSVG(p.a,p.b):""}<div><b class="num">${fmtDiff(p.diff,p.d.unit)}${us}</b><small>${p.d.name}：標準 ${fmt(p.a,p.d.unit)}${us}，你 ${fmt(p.b,p.d.unit)}${us}</small></div></div>
+      <div class="metric">${ARC_OK.has(p.d.k)&&isFinite(p.a)&&isFinite(p.b)?arcSVG(p.a,p.b):""}<div><b class="num">${fmtDiff(p.diff,p.d.unit)}${us}</b><small>${p.d.name}：標準 ${fmt(p.a,p.d.unit)}${us}，你${p.per?" 平均":""} ${fmt(p.b,p.d.unit)}${us}${p.per?`<br>每一球：${p.per.map(v=>fmtDiff(v,p.d.unit)+us).join("、")}`:""}</small></div></div>
       <p>${p.c[1]}</p><p class="drill">${p.c[2]}</p>
       <button class="btn" data-see="${p.d.phase==="出手"?"br":"fc"}">在影片中看${p.d.phase==="出手"?"出手":"落地"}那一刻</button></article>`; }).join("")
     : `<article class="issue g"><span class="tg">全部通過</span><h4>${rows.filter(r=>r.st).length} 個檢查項目都在容許範圍內</h4><p>和標準動作非常接近。可以換一支新的練習影片，持續追蹤。</p></article>`;
@@ -1392,9 +1431,11 @@ function report(){
 
 /* ---------- 三個瞬間 ---------- */
 const urlCache=new Map();
-function frameURL(c,i){ const f=c.frames?.[i]; if(!f?.img) return ""; const k=c.key+(c.gen||0)+":"+i; if(!urlCache.has(k)) urlCache.set(k,URL.createObjectURL(f.img)); return urlCache.get(k); }
+function frameURLf(c,f){ if(!f?.img) return ""; const k=c.key+(c.gen||0)+":"+f.t.toFixed(4); if(!urlCache.has(k)) urlCache.set(k,URL.createObjectURL(f.img)); return urlCache.get(k); }
+function frameURL(c,i){ return frameURLf(c,c.frames?.[i]); }
 function renderMoments(){
-  const box=$("#moments"); if(!(R.frames&&P.frames)){ box.innerHTML=""; return; }
+  const box=$("#moments"); if(!(R.frames&&P.frames)){ box.innerHTML=""; $("#momPitch").innerHTML=""; return; }
+  renderMomPitch();
   let h=`<span></span><span class="ch"><i style="background:var(--ghost)"></i>標準</span><span class="ch"><i style="background:var(--chalk)"></i>練習</span>`;
   for(const k of ["kh","fc","br"]){
     h+=`<span class="rl">${EVN[k]}</span>`;
@@ -1406,9 +1447,10 @@ function renderMoments(){
   }
   box.innerHTML=h;
   $$(".mom",box).forEach(b=>b.addEventListener("click",()=>openEditor(b.dataset.card==="ref"?R:P,b.dataset.ev)));
-  const bad=[R,P].filter(c=>!(c.events.kh<c.events.fc&&c.events.fc<c.events.br));
-  $("#momWhy").textContent=bad.length?"時間順序不對：應該是抬腿 → 落地 → 出手，請修正":"";
-  $("#toResult").disabled=!!bad.length;
+  const okE=E=>E.kh<E.fc&&E.fc<E.br, badP=P.pitches?P.included.filter(k=>!okE(P.pitches[k].events)):(okE(P.events)?[]:[0]);
+  const why=!okE(R.events)?"標準影片的時間順序不對：應該是抬腿 → 落地 → 出手，請修正":badP.length?`練習影片${P.included.length>1?`第 ${badP.map(k=>k+1).join("、")} 球`:""}的時間順序不對，請修正`:"";
+  $("#momWhy").textContent=why;
+  $("#toResult").disabled=!!why;
 }
 const ED={c:null,k:null,i:0};
 function openEditor(c,k){
@@ -1457,12 +1499,147 @@ $("#edOk").addEventListener("click",()=>{
   buzz(10); $("#sheet-edit").close(); renderMoments();
 });
 
+/* ---------- 一支影片多球 ---------- */
+function nearestIn(A,t){ if(!A||!A.length) return -1; let lo=0,hi=A.length-1; while(hi-lo>1){ const m=(lo+hi)>>1; if(A[m].t<t) lo=m; else hi=m; } return Math.abs(A[lo].t-t)<=Math.abs(A[hi].t-t)?lo:hi; }
+// 投球手腕速度的高峰（出手）＋出手前一秒內髖部往前移動 → 一球；彼此至少隔 1 秒（真實時間）
+function findPitches(F){
+  const n=F.length, I=idx(); if(n<24) return [{a:0,b:n-1}];
+  const T=i=>realT(F[i].t);
+  const tls=F.map(f=>Math.hypot((f.lm[11].x+f.lm[12].x-f.lm[23].x-f.lm[24].x)/2,(f.lm[11].y+f.lm[12].y-f.lm[23].y-f.lm[24].y)/2)).sort((x,y)=>x-y);
+  const tl=tls[n>>1]||1, v=new Float64Array(n);
+  for(let i=1;i<n-1;i++){ const d=T(i+1)-T(i-1); if(d>0) v[i]=Math.hypot(F[i+1].lm[I.wr].x-F[i-1].lm[I.wr].x,F[i+1].lm[I.wr].y-F[i-1].lm[I.wr].y)/d/tl; }
+  const vs=Array.from(v,(_,i)=>(v[Math.max(0,i-1)]+v[i]+v[Math.min(n-1,i+1)])/3);
+  const vmax=Math.max(...vs), hipX=i=>(F[i].lm[23].x+F[i].lm[24].x)/2;
+  const cand=[]; for(let i=1;i<n-1;i++) if(vs[i]>=0.4*vmax && vs[i]>=vs[i-1] && vs[i]>=vs[i+1]) cand.push(i);
+  cand.sort((x,y)=>vs[y]-vs[x]);
+  const peaks=[];
+  for(const i of cand){
+    if(peaks.some(p=>Math.abs(T(p)-T(i))<1.0)) continue;
+    let j=i; while(j>0 && T(i)-T(j-1)<=1.0) j--;
+    if(peaks.length && Math.abs(hipX(i)-hipX(j))/tl<0.35) continue;   // 手臂揮動但身體沒有往前，不算一球
+    peaks.push(i);
+  }
+  peaks.sort((x,y)=>x-y);
+  if(peaks.length<=1) return [{a:0,b:n-1}];
+  const at=t=>{ let k=0; while(k<n-1 && T(k)<t) k++; return k; };
+  const segs=peaks.map((p,k)=>{ const lo=Math.max(T(p)-2.5, k?(T(peaks[k-1])+T(p))/2:-Infinity), hi=Math.min(T(p)+0.8, k<peaks.length-1?(T(p)+T(peaks[k+1]))/2:Infinity);
+    return {a:at(lo), b:Math.min(n-1,at(hi))}; }).filter(s=>s.b-s.a>=12);
+  return segs.length>1?segs:[{a:0,b:n-1}];
+}
+async function runAI(c){
+  c.ruleEvents=detectEvents(c.frames); c.events={...c.ruleEvents}; c.eventSource="rule"; c.aiError=null;
+  try{ c.events=await aiEvents(c); c.eventSource="ai"; }catch(e){ console.error(e); c.aiError=String(e.message||e); }
+  try{ c.aiAng=await aiAngles(c); }catch(e){ console.error(e); c.aiAng=null; }
+  c.autoEvents={...c.events}; c.corrections=[];
+}
+async function analyzePitches(c){
+  if(!c.allFrames){ c.allFrames=c.frames; c.allRaw=c.rawFrames; }
+  const segs=findPitches(c.allFrames), prev=c.pitches||[], keep=prev.length===segs.length, out=[];
+  c.pi=-1;
+  for(const [k,s] of segs.entries()){
+    c.frames=c.allFrames.slice(s.a,s.b+1); c.rawFrames=c.allRaw.slice(s.a,s.b+1); c.offset=s.a; c.span=[c.frames[0].t,c.frames.at(-1).t];
+    await runAI(c);
+    let q=0; try{ const qq=quality(c); q=qq.meanVisibility-qq.boneLengthCV; }catch(e){}
+    out.push({a:s.a,b:s.b,frames:c.frames,rawFrames:c.rawFrames,events:c.events,autoEvents:c.autoEvents,ruleEvents:c.ruleEvents,aiAng:c.aiAng,eventSource:c.eventSource,aiError:c.aiError,corrections:c.corrections,include:keep?prev[k].include:true,q});
+  }
+  const prevPi=keep?prev.findIndex(p=>p.sel):-1;
+  c.pitches=out; c.aiSlow=setting.slow;
+  const pick=prevPi>=0?prevPi:(c===R&&out.length>1?out.reduce((b,p,k)=>p.q>out[b].q?k:b,0):0);
+  c.usePitch(pick); out.forEach((p,k)=>p.sel=k===pick);
+}
+function renderPitchStrips(){
+  for(const c of [R,P]){
+    const box=$(".pitches",c.root);
+    if(!c.pitches||c.pitches.length<2){ box.innerHTML=""; box.hidden=true; continue; }
+    box.hidden=false;
+    const multi=c===P, n=c.pitches.length, inc=c.included.length;
+    box.innerHTML=`<p class="ph"><b>找到 ${n} 球</b><span>${multi?`點選要比對的球，已選 ${inc} 球`:"點選一球當作標準"}</span></p>
+      <div class="pstrip" role="${multi?"group":"radiogroup"}" aria-label="${multi?"要比對的球":"當作標準的球"}">${c.pitches.map((p,k)=>{ const on=multi?p.include:k===c.pi, f=p.frames[p.events.br];
+        return `<button class="pcard${on?" on":""}" data-k="${k}" role="${multi?"checkbox":"radio"}" aria-checked="${on}" aria-label="第 ${k+1} 球，出手在影片 ${f.t.toFixed(1)} 秒"><img alt="" src="${frameURLf(c,f)}"><span>第 ${k+1} 球</span><i aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i></button>`; }).join("")}</div>
+      <p class="pmsg" role="status"></p>`;
+    $$(".pcard",box).forEach(b=>b.addEventListener("click",()=>{
+      const k=+b.dataset.k;
+      if(multi){
+        const p=c.pitches[k];
+        if(p.include && c.included.length<=1){ $(".pmsg",box).textContent="至少要留一球才能比對"; buzz([20,40,20]); return; }
+        p.include=!p.include; if(p.include && PV!=="all") PV="all";
+      } else { c.usePitch(k); c.pitches.forEach((p,j)=>p.sel=j===k); }
+      buzz(6); c.video.pause(); c.seek(c.pitches[k].frames[c.pitches[k].events.br].t); onDataChange();
+    }));
+  }
+}
+function renderMomPitch(){
+  const box=$("#momPitch"), inc=P.included;
+  if(inc.length<2){ box.innerHTML=""; return; }
+  box.innerHTML=`<p class="note">練習影片有 ${inc.length} 球，切換查看每一球：</p><div class="seg" role="group" aria-label="切換練習影片的球">${inc.map(k=>`<button data-k="${k}" class="${k===P.pi?"on":""}">第 ${k+1} 球</button>`).join("")}</div>`;
+  $$("button",box).forEach(b=>b.addEventListener("click",()=>{ P.usePitch(+b.dataset.k); buzz(6); onDataChange(); renderMoments(); }));
+}
+// 結果頁：全部平均或單一球
+let PV="all";
+const multiOn=()=>P.included.length>=2;
+function perPitch(){
+  const keep=P.pi, list=[];
+  for(const k of P.included){ P.usePitch(k); list.push({k, m:metrics(P), ratio:viewRatio(P), side:isSide(P)}); }
+  P.usePitch(keep); return list;
+}
+function PV_MULTI(){
+  if(!multiOn()||PV!=="all") return null;
+  const list=perPitch(), mean={};
+  for(const key of Object.keys(list[0].m)){ const vs=list.map(x=>x.m[key]).filter(v=>isFinite(v)); mean[key]=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:NaN; }
+  const ratio=list.reduce((s,x)=>s+x.ratio,0)/list.length;
+  return {list, mean, ratio, side:list.every(x=>x.side)};
+}
+const PV_LABEL=()=>multiOn()?`第 ${P.pi+1} 球，`:"";
+function repPitch(){   // 最接近平均的一球，用來播放
+  const list=perPitch(), mr=metrics(R); let best=list[0].k, bs=Infinity;
+  for(const x of list){ let s=0; for(const d of DEFS){ const vs=list.map(y=>y.m[d.k]).filter(isFinite); if(!vs.length||!isFinite(x.m[d.k])) continue; const mean=vs.reduce((a,b)=>a+b,0)/vs.length; s+=Math.abs(x.m[d.k]-mean)/d.tol; } if(s<bs){ bs=s; best=x.k; } }
+  return best;
+}
+function syncPitchView(){
+  if(!P.pitches) return;
+  if(!multiOn()){ PV="all"; return; }
+  if(PV!=="all" && !P.pitches[PV]?.include) PV="all";
+  const k=PV==="all"?repPitch():PV; if(k!==P.pi) P.usePitch(k);
+}
+function renderPitchBar(){
+  const bar=$("#pitchBar"), note=$("#playNote");
+  if(!multiOn()){ bar.innerHTML=""; bar.hidden=true; note.hidden=true; return; }
+  bar.hidden=false; note.hidden=false;
+  const inc=P.included;
+  bar.innerHTML=`<div class="seg" role="group" aria-label="選擇要看的球"><button data-v="all" class="${PV==="all"?"on":""}">全部 ${inc.length} 球</button>${inc.map(k=>`<button data-v="${k}" class="${PV===k?"on":""}">第 ${k+1} 球</button>`).join("")}</div>`;
+  $$("button",bar).forEach(b=>b.addEventListener("click",()=>{ PV=b.dataset.v==="all"?"all":+b.dataset.v; buzz(6); stopPlay(); onDataChange(); requestAnimationFrame(()=>{ drawCmp(); chart(); }); }));
+  note.textContent=PV==="all"?`正在播放第 ${P.pi+1} 球（最接近 ${inc.length} 球的平均），點上方可以切換。`:`正在播放第 ${P.pi+1} 球。`;
+}
+// 每一球和標準的差距：綠色是容許範圍，點太分散代表動作還不穩定
+function renderConsist(multi,rows){
+  const box=$("#consist");
+  if(!multi){ box.innerHTML=""; box.hidden=true; return; }
+  box.hidden=false;
+  const rs=rows.filter(r=>r.st && r.per && r.per.some(isFinite));
+  box.innerHTML=`<h3>每一球的穩定度</h3><p class="note">綠色是和標準差不多的範圍，圓點上的數字是第幾球。點越集中代表每一球越一致；一致但都在綠色外，代表動作已經固定在不同的位置。</p>`+rs.map(r=>{
+    const d=r.d, us=unitSuffix(d.unit), per=r.per.map((v,i)=>({v,k:multi.list[i].k})).filter(x=>isFinite(x.v));
+    const S=Math.max(3*d.tol, ...per.map(x=>Math.abs(x.v)*1.15)), X=v=>50+v/S*48, z=d.tol/S*48;
+    const vals=per.map(x=>x.v), spread=Math.max(...vals)-Math.min(...vals), stable=spread<=d.tol;
+    const placed=[]; const dots=per.sort((p,q)=>p.v-q.v).map(x=>{ const left=X(x.v); let lane=0; while(placed.some(p=>p.lane===lane && Math.abs(p.left-left)<8.5)) lane++; placed.push({left,lane});
+      const cls=Math.abs(x.v)>2*d.tol?"r":Math.abs(x.v)>d.tol?"y":"g";
+      return `<span class="cdot ${cls}" style="left:${left.toFixed(1)}%;top:${7+lane*25}px" title="第 ${x.k+1} 球 ${fmtDiff(x.v,d.unit)}${us}">${x.k+1}</span>`; }).join("");
+    return `<div class="crow"><span class="cn">${d.name}</span><span class="cs">每一球相差 ${fmt(spread,d.unit)}${us} <span class="pill ${stable?"g":"y"}">${stable?"一致":"忽大忽小"}</span></span>
+      <div class="ctrack" style="height:${36+Math.max(0,...placed.map(p=>p.lane))*25}px" aria-label="${d.name}，每一球和標準的差：${per.map(x=>`第 ${x.k+1} 球 ${fmtDiff(x.v,d.unit)}${us}`).join("，")}"><i class="czone" style="left:${(50-z).toFixed(1)}%;width:${(2*z).toFixed(1)}%"></i><i class="cmid"></i>${dots}</div>
+      <span class="cax">比標準少</span><span class="cax" style="text-align:right">比標準多</span></div>`; }).join("");
+}
+function pitchesOut(c){
+  if(!c.pitches) return null; c.save();
+  const ev=(p,E)=>Object.fromEntries(["kh","fc","br"].map(k=>[k,{frame:E[k]+p.a, t:r4(p.frames[E[k]].t), tReal:r4(realT(p.frames[E[k]].t))}]));
+  return c.pitches.map((p,k)=>({index:k, included:p.include, selected:k===c.pi, frameRange:[p.a,p.b], tRange:[r4(p.frames[0].t),r4(p.frames.at(-1).t)],
+    events:{auto:ev(p,p.autoEvents), final:ev(p,p.events), source:p.eventSource, corrections:p.corrections}}));
+}
+
 /* ---------- 對照播放 ---------- */
 const cmp={playing:false, frac:0, last:0, busy:{}, busyAt:{}, want:{}, lastBm:{}, tr:null, tp:null, range:null, mode:"ghost", speed:0.25};
 const bmCache=new Map();
 function getBitmap(c,i){
   const f=c.frames[i]; if(!f?.img) return null;
-  const k=c.key+(c.gen||0)+":"+i;
+  const k=c.key+(c.gen||0)+":"+f.t.toFixed(4);
   if(bmCache.has(k)) return bmCache.get(k);
   bmCache.set(k,null);
   createImageBitmap(f.img).then(bm=>{
@@ -1694,7 +1871,7 @@ function quality(c){
   const orderOK=E.kh<E.fc && E.fc<E.br;
   const tempoMs=(T(E.br)-T(E.fc))*1000;
   const tempoOK=tempoMs>=60 && tempoMs<=300;
-  const coverage=F.length/Math.max(1,Math.floor((c.range[1]-c.range[0])*setting.srate)+1);
+  const sp_=c.span||c.range, coverage=F.length/Math.max(1,Math.floor((sp_[1]-sp_[0])*setting.srate)+1);
   let releaseAgreeFrames=null;
   if(c.ball.length){ const t0=Math.min(...c.ball.map(p=>p.t)); releaseAgreeFrames=Math.round((t0-c.frames[E.br].t)*setting.vfps); }
   const corrected=c.corrections.length>0 || ["kh","fc","br"].some(k=>A[k]!==E[k]);
@@ -1704,7 +1881,7 @@ function quality(c){
   return {meanVisibility:r4(vis), boneLengthCV:r4(boneCV), boneCVPerSegment:cvs.map(r4), eventOrderOK:orderOK, tempoMs:Math.round(tempoMs),
     poseCoverage:r4(coverage), releaseAgreeFrames, corrected, checks, autoLabelEligible:passAll && !corrected};
 }
-function evOut(c,E){ return Object.fromEntries(["kh","fc","br"].map(k=>[k,{frame:E[k], t:r4(c.frames[E[k]].t), tReal:r4(realT(c.frames[E[k]].t))}])); }
+function evOut(c,E){ return Object.fromEntries(["kh","fc","br"].map(k=>[k,{frame:E[k]+(c.offset||0), t:r4(c.frames[E[k]].t), tReal:r4(realT(c.frames[E[k]].t))}])); }
 async function grabFrames(c){
   const v=c.video, back=v.currentTime, br=c.frames[c.events.br].t, step=1/setting.vfps, out=[];
   const W=v.videoWidth, H=v.videoHeight;
@@ -1726,9 +1903,9 @@ async function grabFrames(c){
 async function videoOut(c, role, radar, withFrames){
   const v=c.video, W=v.videoWidth, H=v.videoHeight, sp=computeSpeed(c);
   return {
-    role, fileName:c.fileName, fileSizeBytes:c.fileSize, durationSec:r4(v.duration), width:W, height:H,
+    role, pitches:pitchesOut(c), fileName:c.fileName, fileSizeBytes:c.fileSize, durationSec:r4(v.duration), width:W, height:H,
     analysisRange:c.range.map(r4), captureFpsEstimate:setting.vfps*setting.slow,
-    frames:c.rawFrames.map(f=>({t:r4(f.t), tReal:r4(realT(f.t)),
+    frames:(c.allRaw||c.rawFrames).map(f=>({t:r4(f.t), tReal:r4(realT(f.t)),
       lm:f.lm.map(p=>[r4(p.x/W),r4(p.y/H),r4(p.v)]), world:f.wl?f.wl.map(p=>[r4(p.x),r4(p.y),r4(p.z)]):null})),
     events:{auto:evOut(c,c.autoEvents), final:evOut(c,c.events), rules:c.ruleEvents?evOut(c,c.ruleEvents):null, source:c.eventSource||"rule", aiError:c.aiError||null, corrections:c.corrections, throwDirection:c.events.dir},
     ball:{marks:c.ball.map(p=>({t:r4(p.t), tReal:r4(realT(p.t)), x:r4(p.x/W), y:r4(p.y/H)})),
@@ -1839,7 +2016,10 @@ async function aiEvents(card){
 const R=new Card("ref"), P=new Card("prac"); window.R=R; window.P=P;
 for(const c of [R,P]) c.video.addEventListener("seeked",()=>onCardSeeked(c));
 function onDataChange(){
-  computeAlign(); cacheSeries(); renderLights();
+  R.save(); P.save();
+  if(P.pitches && !P.pitches[P.pi]?.include){ const k=P.included[0]; if(k!=null) P.usePitch(k); }
+  if(step===4) syncPitchView();
+  computeAlign(); cacheSeries(); renderLights(); renderPitchStrips();
   if(R.frames&&P.frames){ setupSync(); renderAlign(); report(); if(step===4) chart(); renderSlowHint(); }
   else if(step>=3) go(2);
   updateSpeed(); updateVidDock(); if(step===3) renderMoments();
@@ -1854,40 +2034,27 @@ async function autoSlowCheck(force){
   return false;
 }
 async function reanalyzeAI(){
-  for(const c of [R,P]){
-    if(!c.frames) continue;
-    c.ruleEvents=detectEvents(c.frames); c.events={...c.ruleEvents}; c.eventSource="rule";
-    try{ c.events=await aiEvents(c); c.eventSource="ai"; }catch(e){ console.error(e); }
-    try{ c.aiAng=await aiAngles(c); }catch(e){ c.aiAng=null; }
-    c.aiSlow=setting.slow; c.autoEvents={...c.events}; c.corrections=[];
-  }
+  for(const c of [R,P]) if(c.pitches) await analyzePitches(c);
   onDataChange();
 }
 // AI 時間點與角度都依「真實時間」計算；慢動作倍率改變後，用舊倍率算的結果要重算
 async function refreshStaleAI(){
   let changed=false;
   for(const c of [R,P]){
-    if(!c.frames || c.aiSlow===setting.slow) continue;
-    c.ruleEvents=detectEvents(c.frames);
-    if(!(c.corrections&&c.corrections.length)){
-      c.events={...c.ruleEvents}; c.eventSource="rule";
-      try{ c.events=await aiEvents(c); c.eventSource="ai"; }catch(e){ console.error(e); }
-      c.autoEvents={...c.events};
-    } else c.events.dir=c.ruleEvents.dir;
-    try{ c.aiAng=await aiAngles(c); }catch(e){ c.aiAng=null; }
-    c.aiSlow=setting.slow; changed=true;
+    if(!c.pitches || c.aiSlow===setting.slow) continue;
+    await analyzePitches(c); changed=true;
   }
   return changed;
 }
 function wristSpeedVideo(c){ // 投球手腕速度第 95 百分位（像素／影片秒）
   const I=idx(), F=c.frames, v=[];
   for(let i=1;i<F.length;i++){ const dt=F[i].t-F[i-1].t; if(dt>0) v.push(Math.hypot(F[i].lm[I.wr].x-F[i-1].lm[I.wr].x, F[i].lm[I.wr].y-F[i-1].lm[I.wr].y)/dt); }
-  v.sort((a,b)=>a-b); return v[Math.floor(v.length*0.95)]||0;
+  const s=v.map((x,i)=>(v[Math.max(0,i-1)]+x+v[Math.min(v.length-1,i+1)])/3).sort((a,b)=>b-a); return s[Math.min(2,s.length-1)]||0;
 }
 function speedMs(c, slow){ return wristSpeedVideo(c)*slow*(setting.height/100)/(c.hpx||1); }
 function pickSlow(cards){
   const avg=f=>cards.map(c=>speedMs(c,f)).reduce((a,x)=>a+x,0)/cards.length;
-  return [1,2,4,8].reduce((b,f)=>Math.abs(Math.log(avg(f)/22))<Math.abs(Math.log(avg(b)/22))?f:b,1);
+  return [1,2,4,8].reduce((b,f)=>Math.abs(Math.log(avg(f)/28))<Math.abs(Math.log(avg(b)/28))?f:b,1);
 }
 
 const SLOW_NM={1:"一般速度",2:"慢動作 60fps（2×）",4:"慢動作 120fps（4×）",8:"慢動作 240fps（8×）"};
@@ -1903,9 +2070,9 @@ function slowWarn(){
   if($("#slow").value==="auto") return "";
   const cards=[R,P].filter(c=>c.frames&&c.hpx); if(!cards.length) return "";
   const cur=setting.slow, avg=avgSpeed(cards,cur);
-  if(avg>=10 && avg<=40) return "";
+  if(avg>=14 && avg<=56) return "";
   const best=pickSlow(cards); if(best===cur) return "";
-  return `<div class="banner"><b>慢動作倍率可能設錯了</b><span>以 ${cur}× 計算，投球手腕最快約 ${avg.toFixed(0)} m/s，不合理（一般約 15–30 m/s）。改成 ${best}× 約為 ${avgSpeed(cards,best).toFixed(0)} m/s。倍率錯了，時間點、角度和球速都會跟著錯。</span><button class="btn" id="useSlow" data-v="${best}">改用 ${best}× 重新計算</button></div>`;
+  return `<div class="banner"><b>慢動作倍率可能設錯了</b><span>以 ${cur}× 計算，投球手腕最快約 ${avg.toFixed(0)} m/s，不合理（一般約 20–40 m/s）。改成 ${best}× 約為 ${avgSpeed(cards,best).toFixed(0)} m/s。倍率錯了，時間點、角度和球速都會跟著錯。</span><button class="btn" id="useSlow" data-v="${best}">改用 ${best}× 重新計算</button></div>`;
 }
 /* ---------- 拍攝檢查 ---------- */
 function renderLights(){
@@ -1929,8 +2096,9 @@ function renderLights(){
 // 測試用介面
 window.__T={cmp,R,P,AUTO,ST,onDataChange,hasThumbs,warp:t=>warp(t),go,smooth,estHeightPx,detectEvents,aiEvents,aiAngles,get step(){return step}};
 setupScreen(); hero();
+const start=({pitcher:1,videos:2}[location.hash.slice(1)])||0;   // 重新整理後回到投手或影片步驟（分析結果不會保留）
 history.replaceState({step:0},"","#");
-const start=({pitcher:1,videos:2}[location.hash.slice(1)])||0; if(start) go(start);
+if(start) go(start);
 
 </script>
 </body>
