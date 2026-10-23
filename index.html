@@ -98,6 +98,12 @@ canvas.chart{width:100%;height:260px;display:block}
 .shootcheck div,.hint{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:6px;padding:8px 10px;font-size:.85rem;background:var(--warn-bg);color:var(--ink)}
 .shootcheck div.ok{border-left-color:var(--good);background:var(--good-bg)}
 .hint{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.cmpgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cmpgrid figure{margin:0;display:flex;flex-direction:column;gap:4px;min-width:0}
+.cmpgrid figcaption{font-size:.8rem;font-weight:700;display:flex;align-items:center;gap:6px}
+.cmpgrid canvas{width:100%;display:block;border-radius:6px;background:#000}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+details summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
 .consent{border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
 .consent h3{margin:0;font-size:1rem}
 .consent ol{margin:0;padding-left:1.3em;font-size:.86rem;max-width:75ch;display:flex;flex-direction:column;gap:4px}
@@ -169,21 +175,35 @@ canvas.chart{width:100%;height:260px;display:block}
 </div>
 
 <section class="panel" id="sync" aria-labelledby="syncH">
-  <h2 id="syncH">自動對齊同步播放</h2>
-  <p class="note">兩支影片都分析完成後，系統會自動剪出各自的投球片段，再逐格比對骨架姿勢找出對應關係（DTW）。兩支影片從第幾秒開始起腳、節奏快慢不同都沒關係，同步播放時兩邊永遠顯示同一個動作階段。也可以切換成只用「抬腿、前腳落地、出手」三個錨點對齊。</p>
-  <div class="row">
-    <label class="f">對齊方式
-      <select id="alignMode"><option value="dtw" selected>骨架自動對齊（DTW）</option><option value="anchor">三個錨點</option></select></label>
-    <span class="status" id="alignInfo"></span>
+  <h2 id="syncH">對照播放</h2>
+  <div class="cmpgrid">
+    <figure><figcaption><span class="dot" style="background:var(--ref)"></span>標準</figcaption><canvas id="cmpL"></canvas></figure>
+    <figure><figcaption><span class="dot" style="background:var(--prac)"></span>練習</figcaption><canvas id="cmpR"></canvas></figure>
   </div>
-  <div id="alignEv"></div>
   <div class="row">
-    <button id="syncPlay" disabled>▶ 同步播放</button>
-    <button data-jump="kh" disabled>跳到抬腿</button><button data-jump="fc" disabled>跳到前腳落地</button><button data-jump="br" disabled>跳到出手</button>
+    <button id="syncPlay" disabled>▶ 播放</button>
+    <button id="cmpPrev" disabled aria-label="上一格">◀</button><button id="cmpNext" disabled aria-label="下一格">▶▏</button>
+    <label class="f" style="flex-direction:row;align-items:center;gap:6px">速度
+      <select id="cmpSpeed"><option value="0.1">0.1×</option><option value="0.25" selected>0.25×</option><option value="0.5">0.5×</option><option value="1">1×（真實速度）</option></select></label>
     <span class="mono status" id="syncT"></span>
   </div>
   <input type="range" id="syncSlider" min="0" max="1000" value="0" disabled aria-label="同步時間軸">
   <div class="ticks" id="ticks"></div>
+  <div class="row">
+    <button data-jump="kh" disabled>跳到抬腿</button><button data-jump="fc" disabled>跳到前腳落地</button><button data-jump="br" disabled>跳到出手</button>
+    <label><input type="checkbox" id="cmpGhost" checked> 把標準骨架疊在練習影片上</label>
+    <label><input type="checkbox" id="cmpDiff" checked> 標出角度差異</label>
+  </div>
+  <p class="note">藍色虛影是標準動作的骨架，依髖部位置和軀幹長度疊在練習影片上；紅圈代表該關節的角度差超過容許範圍，旁邊的數字是「練習 − 標準」。兩支影片依 AI 找到的抬腿、落地、出手對齊，錨點之間用骨架逐格對應，所以起腳時間、節奏不同也能同步。</p>
+  <details>
+    <summary>對齊方式與時間點</summary>
+    <div class="row" style="margin-top:8px">
+      <label class="f">對齊方式
+        <select id="alignMode"><option value="dtw" selected>骨架自動對齊（DTW）</option><option value="anchor">三個錨點</option></select></label>
+      <span class="status" id="alignInfo"></span>
+    </div>
+    <div id="alignEv"></div>
+  </details>
 </section>
 
 <section class="panel" aria-labelledby="repH">
@@ -750,29 +770,99 @@ function warp(tRefReal){ // 標準影片真實時間 → 練習影片真實時�
   const u=(tRefReal-a[s])/((a[s+1]-a[s])||1e-6);
   return b[s]+u*(b[s+1]-b[s]);
 }
-let playing=null;
+/* ---------- 對照播放 ---------- */
+const cmp={playing:false, frac:0, last:0, busy:{}, busyAt:{}, want:{}};
+function seekCard(c,t){
+  const k=c.key; t=Math.max(0,Math.min(c.video.duration||t,t)); cmp.want[k]=t;
+  if(cmp.busy[k] && performance.now()-(cmp.busyAt[k]||0)<600) return;   // 上一次跳轉還沒完成；超過 0.6 秒視為卡住，重新跳轉
+  cmp.busy[k]=true; cmp.busyAt[k]=performance.now(); c.video.currentTime=t;
+}
+function onCardSeeked(c){
+  const k=c.key; cmp.busy[k]=false;
+  if(cmp.want[k]!=null && Math.abs(cmp.want[k]-c.video.currentTime)>0.004){ seekCard(c,cmp.want[k]); }
+  drawCmp();
+}
 function syncTo(frac){
-  const a=anchors(R), tr=a[0]+frac*(a[4]-a[0]), tp=warp(tr);
-  R.video.currentTime=tr*setting.slow; P.video.currentTime=tp*setting.slow;
+  if(!(R.frames&&P.frames)) return;
+  cmp.frac=Math.max(0,Math.min(1,frac));
+  const a=anchors(R), tr=a[0]+cmp.frac*(a[4]-a[0]), tp=warp(tr);
+  R.video.pause(); P.video.pause();
+  seekCard(R,tr*setting.slow); seekCard(P,tp*setting.slow);
   $("#syncT").textContent=`距前腳落地 ${((tr-a[2])*1000).toFixed(0)} ms`;
-  $("#syncSlider").value=Math.round(frac*1000);
+  $("#syncSlider").value=Math.round(cmp.frac*1000);
 }
 function setupSync(){
   const ok=!!(R.frames&&P.frames);
-  ["#syncPlay","#syncSlider","[data-jump=kh]","[data-jump=fc]","[data-jump=br]"].forEach(s=>$(s).disabled=!ok);
+  ["#syncPlay","#syncSlider","#cmpPrev","#cmpNext","[data-jump=kh]","[data-jump=fc]","[data-jump=br]"].forEach(s=>$(s).disabled=!ok);
   const tk=$("#ticks"); tk.innerHTML="";
-  if(!ok) return;
+  if(!ok){ drawCmp(); return; }
   const a=anchors(R), L=a[4]-a[0];
   [["抬腿",a[1]],["落地",a[2]],["出手",a[3]]].forEach(([n,t])=>{ const s=document.createElement("span"); s.style.left=((t-a[0])/L*100)+"%"; s.textContent=n; tk.appendChild(s); });
+  drawCmp();
 }
-$("#syncSlider").addEventListener("input",e=>syncTo(e.target.value/1000));
-document.querySelectorAll("[data-jump]").forEach(b=>b.addEventListener("click",()=>{ const a=anchors(R), k={kh:1,fc:2,br:3}[b.dataset.jump]; syncTo((a[k]-a[0])/(a[4]-a[0])); }));
+const stepFrac=()=>{ const a=anchors(R); return (1/CANON_FPS)/((a[4]-a[0])||1); };
+function stopPlay(){ cmp.playing=false; $("#syncPlay").textContent="▶ 播放"; }
+function tick(ts){
+  if(!cmp.playing) return;
+  for(const c of [R,P]) if(cmp.busy[c.key] && performance.now()-(cmp.busyAt[c.key]||0)>600) seekCard(c,cmp.want[c.key]);
+  const dt=Math.min(0.1,(ts-cmp.last)/1000); cmp.last=ts;
+  const a=anchors(R), f=cmp.frac+dt*(+$("#cmpSpeed").value)/((a[4]-a[0])||1);
+  if(f>=1){ syncTo(1); stopPlay(); return; }
+  syncTo(f); requestAnimationFrame(tick);
+}
+$("#syncSlider").addEventListener("input",e=>{ stopPlay(); syncTo(e.target.value/1000); });
+document.querySelectorAll("[data-jump]").forEach(b=>b.addEventListener("click",()=>{ stopPlay(); const a=anchors(R), k={kh:1,fc:2,br:3}[b.dataset.jump]; syncTo((a[k]-a[0])/(a[4]-a[0])); }));
+$("#cmpPrev").addEventListener("click",()=>{ stopPlay(); syncTo(cmp.frac-stepFrac()); });
+$("#cmpNext").addEventListener("click",()=>{ stopPlay(); syncTo(cmp.frac+stepFrac()); });
 $("#syncPlay").addEventListener("click",()=>{
-  if(playing){ clearInterval(playing); playing=null; $("#syncPlay").textContent="▶ 同步播放"; return; }
-  $("#syncPlay").textContent="❚❚ 暫停"; R.video.pause(); P.video.pause();
-  let f=(+$("#syncSlider").value)/1000; if(f>=1) f=0;
-  playing=setInterval(()=>{ f+=0.006; if(f>1){ clearInterval(playing); playing=null; $("#syncPlay").textContent="▶ 同步播放"; return; } syncTo(f); }, 80);
+  if(cmp.playing){ stopPlay(); return; }
+  if(cmp.frac>=1) cmp.frac=0;
+  cmp.playing=true; $("#syncPlay").textContent="❚❚ 暫停"; cmp.last=performance.now(); requestAnimationFrame(tick);
 });
+["#cmpGhost","#cmpDiff"].forEach(s=>$(s).addEventListener("change",drawCmp));
+const DIFF_J=[["knee","lknee",7,"前膝"],["elbow","el",10,"手肘"],["abd","sh",10,"肩外展"],["trunk","hipmid",7,"軀幹"]];
+function cacheSeries(){ for(const c of [R,P]) c.S=c.frames?{knee:series(c,"knee"),elbow:series(c,"elbow"),abd:series(c,"abd"),trunk:series(c,"trunk")}:null; }
+function drawCmp(){
+  const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const pairs=[[R,$("#cmpL"),css("--ref")],[P,$("#cmpR"),css("--prac")]], I=idx(), dpr=window.devicePixelRatio||1;
+  const iR=R.frames?R.nearest(R.video.currentTime):-1, iP=P.frames?P.nearest(P.video.currentTime):-1;
+  for(const [c,cv,col] of pairs){
+    const g=cv.getContext("2d"), v=c.video, vw=v.videoWidth, vh=v.videoHeight, cw=cv.clientWidth||300;
+    const maxH=window.innerHeight*0.6; let w=cw, h=vw?cw*vh/vw:cw*0.75; if(h>maxH){ w=w*maxH/h; h=maxH; }
+    if(cv.width!==Math.round(cw*dpr)||cv.height!==Math.round(h*dpr)){ cv.width=Math.round(cw*dpr); cv.height=Math.round(h*dpr); cv.style.height=h+"px"; }
+    g.setTransform(dpr,0,0,dpr,0,0); g.fillStyle="#000"; g.fillRect(0,0,cw,h);
+    if(!vw || v.readyState<2){ g.fillStyle="#9aa6b2"; g.font="13px sans-serif"; g.fillText("分析兩支影片後顯示",12,24); continue; }
+    const ox=(cw-w)/2, s=w/vw; g.drawImage(v,ox,0,w,h);
+    if(!c.frames) continue;
+    const i=c.nearest(v.currentTime), f=c.frames[i]; if(!f) continue;
+    const P2=q=>[ox+q.x*s, q.y*s];
+    // 標準骨架疊在練習影片上
+    if(c===P && $("#cmpGhost").checked && iR>=0){
+      const rl=R.frames[iR].lm, pl=f.lm;
+      const hr=mid(rl[23],rl[24]), sr=mid(rl[11],rl[12]), hp=mid(pl[23],pl[24]), sp=mid(pl[11],pl[12]);
+      const k=Math.hypot(sp.x-hp.x,sp.y-hp.y)/(Math.hypot(sr.x-hr.x,sr.y-hr.y)||1), flip=(R.events.dir||1)!==(P.events.dir||1)?-1:1;
+      const G=q=>P2({x:hp.x+(q.x-hr.x)*k*flip, y:hp.y+(q.y-hr.y)*k});
+      g.strokeStyle="rgba(96,165,250,0.85)"; g.lineWidth=3; g.setLineDash([6,4]); g.lineCap="round";
+      for(const [a,b] of SKEL){ const A=G(rl[a]),B=G(rl[b]); g.beginPath(); g.moveTo(...A); g.lineTo(...B); g.stroke(); }
+      g.setLineDash([]);
+    }
+    g.strokeStyle=col; g.lineWidth=3; g.lineCap="round";
+    for(const [a,b] of SKEL){ const A=P2(f.lm[a]),B=P2(f.lm[b]); g.beginPath(); g.moveTo(...A); g.lineTo(...B); g.stroke(); }
+    // 角度差異
+    if(c===P && $("#cmpDiff").checked && R.S && P.S && iR>=0){
+      g.font="bold 12px ui-monospace,'Noto Sans TC',sans-serif"; let row=0;
+      for(const [kind,jn,tol,nm] of DIFF_J){
+        const d=P.S[kind][iP]-R.S[kind][iR]; if(!isFinite(d) || Math.abs(d)<=tol) continue;
+        const q=jn==="hipmid"?mid(f.lm[23],f.lm[24]):f.lm[I[jn]], [x,y]=P2(q);
+        g.strokeStyle="#ef4444"; g.lineWidth=3; g.beginPath(); g.arc(x,y,12,0,7); g.stroke();
+        g.fillStyle="#ef4444"; g.beginPath(); g.arc(x+12,y-12,8,0,7); g.fill(); g.fillStyle="#fff"; g.fillText(String(row+1),x+8,y-8);
+        const t=`${row+1} ${nm} ${d>0?"+":""}${d.toFixed(0)}°`, ty=ox+6, tw=g.measureText(t).width+10;
+        g.fillStyle="rgba(0,0,0,0.7)"; g.fillRect(ty,6+row*22,tw,19); g.fillStyle="#fecaca"; g.fillText(t,ty+5,20+row*22); row++;
+      }
+    }
+  }
+}
+window.addEventListener("resize",drawCmp);
 
 /* ---------- 曲線 ---------- */
 function chart(){
@@ -997,7 +1087,8 @@ async function aiEvents(card){
 }
 /* ---------- 啟動 ---------- */
 const R=new Card("ref","--ref"), P=new Card("prac","--prac");
-function onDataChange(){ computeAlign(); setupSync(); renderAlign(); report(); chart(); updateSpeed(); renderQuality(); renderSlowHint(); renderShootChecks(); }
+for(const c of [R,P]) c.video.addEventListener("seeked",()=>onCardSeeked(c));
+function onDataChange(){ computeAlign(); cacheSeries(); setupSync(); renderAlign(); report(); chart(); updateSpeed(); renderQuality(); renderSlowHint(); renderShootChecks(); }
 $("#hand").addEventListener("change",()=>{ [R,P].forEach(c=>{ if(c.frames){ c.ruleEvents=detectEvents(c.frames); if(c.eventSource!=="ai"){ c.events={...c.ruleEvents}; c.autoEvents={...c.events}; c.corrections=[]; } else c.events.dir=c.ruleEvents.dir; c.renderEvents(); } c.draw(); }); onDataChange(); });
 $("#slow").addEventListener("change",()=>reanalyzeAI());
 async function reanalyzeAI(){
