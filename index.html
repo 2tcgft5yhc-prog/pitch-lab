@@ -104,6 +104,10 @@ canvas.chart{width:100%;height:260px;display:block}
 .cmpgrid canvas{width:100%;display:block;border-radius:6px;background:#000}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
 details summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
+.shoot{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:16px;align-items:start}
+.shoot svg{width:100%;height:auto;display:block}
+.shoot ul{margin:0;padding-left:1.2em;font-size:.88rem;display:flex;flex-direction:column;gap:4px;max-width:60ch}
+@media (max-width:700px){.shoot{grid-template-columns:1fr}}
 .consent{border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
 .consent h3{margin:0;font-size:1rem}
 .consent ol{margin:0;padding-left:1.3em;font-size:.86rem;max-width:75ch;display:flex;flex-direction:column;gap:4px}
@@ -119,26 +123,58 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
   <h1>投球動作實驗室<small>上傳標準投球與練習投球影片，自動對齊動作階段、比較關節角度，並由影片估算球速。所有分析都在你的瀏覽器內完成，影片不會上傳。</small></h1>
 </header>
 
+<section class="panel" aria-labelledby="gH">
+  <h2 id="gH">拍攝前先看</h2>
+  <div class="shoot">
+    <svg viewBox="0 0 360 200" role="img" aria-label="拍攝位置示意圖：手機架在腳架上，位於投球手臂那一側，與投球方向垂直，距離約 4 到 6 公尺">
+      <rect x="1" y="1" width="358" height="198" rx="10" fill="var(--bg)" stroke="var(--line)"/>
+      <circle cx="80" cy="70" r="26" fill="none" stroke="var(--muted)" stroke-dasharray="4 3"/>
+      <text x="80" y="36" text-anchor="middle" font-size="12" fill="var(--muted)">投手丘</text>
+      <circle cx="80" cy="70" r="7" fill="var(--prac)"/>
+      <path d="M300 62 l12 0 l0 10 l-6 7 l-6 -7 z" fill="var(--panel)" stroke="var(--muted)"/>
+      <text x="306" y="44" text-anchor="middle" font-size="12" fill="var(--muted)">本壘</text>
+      <line x1="110" y1="70" x2="288" y2="70" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="7 5"/>
+      <path d="M288 70 l-10 -6 l0 12 z" fill="var(--accent)"/>
+      <text x="200" y="60" text-anchor="middle" font-size="12" fill="var(--accent)">投球方向</text>
+      <line x1="80" y1="98" x2="80" y2="150" stroke="var(--ink)" stroke-width="1.5"/>
+      <path d="M80 98 l-5 9 l10 0 z" fill="var(--ink)"/>
+      <text x="90" y="128" font-size="12" fill="var(--ink)">4–6 公尺，與投球方向垂直</text>
+      <rect x="62" y="152" width="36" height="22" rx="4" fill="var(--ink)"/>
+      <circle cx="88" cy="163" r="5" fill="var(--panel)"/>
+      <text x="108" y="168" font-size="12" fill="var(--ink)">手機橫拿＋腳架，鏡頭約腰部高度</text>
+      <text x="108" y="186" font-size="11" fill="var(--muted)">右投站三壘側（投球手臂那一側），左投站另一側</text>
+    </svg>
+    <ul>
+      <li><b>兩支影片的位置、距離要一樣</b>，否則角度比較沒有意義。</li>
+      <li>全身和出手後的手臂都要在畫面裡，<b>手機橫拿</b>比直拿更容易拍完整。</li>
+      <li>用<b>腳架</b>固定，不要手持、不要變焦；在<b>明亮</b>的地方拍。</li>
+      <li>用相機的<b>慢動作</b>（120 或 240fps）拍攝；上傳後「拍攝方式」選自動判斷即可。</li>
+      <li>避免其他人入鏡；穿和背景顏色不同的衣服，骨架會抓得更準。</li>
+    </ul>
+  </div>
+</section>
+
 <section class="panel" aria-labelledby="setH">
   <h2 id="setH">投手與影片設定</h2>
   <div class="row">
     <label class="f">投球手
       <select id="hand"><option value="R">右投</option><option value="L">左投</option></select></label>
-    <label class="f">影片速度（慢動作倍率）
+    <label class="f">拍攝方式
       <select id="slow">
-        <option value="1">一般速度 1×</option>
-        <option value="2">慢動作 60fps→30fps 2×</option>
-        <option value="4">慢動作 120fps→30fps 4×</option>
-        <option value="8" selected>慢動作 240fps→30fps 8×</option>
+        <option value="auto" selected>自動判斷（建議）</option>
+        <option value="1">一般速度（不是慢動作）</option>
+        <option value="4">慢動作 120fps（4×）</option>
+        <option value="8">慢動作 240fps（8×）</option>
+        <option value="2">慢動作 60fps（2×）</option>
       </select></label>
     <label class="f">影片檔案 fps
       <input id="vfps" type="number" value="30" min="10" max="480" step="1" style="width:90px"></label>
     <label class="f">分析取樣（每影片秒）
       <select id="srate"><option value="15">15 張（快）</option><option value="30" selected>30 張</option><option value="60">60 張（精細）</option></select></label>
     <label class="f">投手身高（公分）
-      <input id="height" type="number" value="178" min="120" max="220" style="width:90px"></label>
+      <input id="height" type="number" min="100" max="220" placeholder="必填，例如 165" style="width:130px"></label>
   </div>
-  <p class="note">慢動作倍率說明：手機用 240fps 拍攝、檔案以 30fps 播放時選 8×。若檔案本身就是 240fps 正常速度播放，請選 1×，並把「影片檔案 fps」設為 240。倍率選錯，時間和球速都會跟著算錯。分析完成後，系統會依手腕速度自動檢查倍率是否合理。</p>
+  <p class="note">「自動判斷」會依投球手腕的速度推算影片的慢動作倍率。iPhone 從相簿選慢動作影片時，常會被轉成其他速度，所以不確定時用自動判斷就好。倍率錯了，時間點、角度和球速都會跟著錯。投手身高會影響球速估算和倍率判斷，請填實際身高。</p>
   <div id="slowHint"></div>
 </section>
 
@@ -263,7 +299,7 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
       <input id="exRadarPrac" type="number" min="40" max="180" step="0.1" style="width:110px"></label>
   </div>
   <div class="row">
-    <label><input type="checkbox" id="exFrames"> 附上出手前後的畫面截圖（訓練球偵測用；畫面可辨識本人，檔案也較大）</label>
+    <label><input type="checkbox" id="exFrames"> 附上出手前後的畫面截圖（訓練球偵測用；只保留投手周圍範圍，但仍可辨識本人）</label>
   </div>
   <div class="consent" id="consentBox">
     <h3>資料使用同意說明</h3>
@@ -289,15 +325,6 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
   <p class="note">「可自動標註」表示這支影片通過所有品質檢查，而且事件時間點沒有被人工修正，可以直接當作自動訓練資料。被修正過的影片同樣很有價值，可以當作人工標註資料。</p>
 </section>
 
-<section class="panel" aria-labelledby="gH">
-  <h2 id="gH">拍攝指引</h2>
-  <div class="guide">
-    <div><b>視角</b>右投從三壘側、左投從一壘側拍，鏡頭與投球方向垂直。兩支影片視角要相同。</div>
-    <div><b>距離與高度</b>距離約 5–6 公尺，鏡頭在腰部高度，全身和出手後 2–3 公尺的球路都要入鏡。</div>
-    <div><b>設備</b>手機開慢動作 240fps，用腳架固定，不要手持也不要變焦。</div>
-    <div><b>光線與服裝</b>白天戶外光線最好；穿貼身、和背景顏色不同的衣服，骨架會抓得更準。</div>
-  </div>
-</section>
 
 <footer class="note" style="max-width:none">
   <p><b>資料來源與授權</b>　抬腿、落地、出手的 AI 偵測模型，是用 <a href="https://github.com/drivelineresearch/openbiomechanics" target="_blank" rel="noopener">Driveline OpenBiomechanics Project</a> 的動作捕捉資料模擬手機側拍訓練而成。資料與本網站內建的模型依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> 授權提供，僅限非商業用途，衍生作品須以相同授權分享。姿勢辨識使用 Google MediaPipe。</p>
@@ -329,8 +356,9 @@ async function getLandmarker(setMsg){
 
 /* ---------- 共用 ---------- */
 const $ = (s,el=document)=>el.querySelector(s);
-const setting = { get hand(){return $("#hand").value}, get slow(){return +$("#slow").value||1},
-  get vfps(){return +$("#vfps").value||30}, get srate(){return +$("#srate").value||30}, get height(){return +$("#height").value||178} };
+const setting = { get hand(){return $("#hand").value}, get slow(){ const v=$("#slow").value; return v==="auto"?AUTO.slow:(+v||1); },
+  get vfps(){return +$("#vfps").value||30}, get srate(){return +$("#srate").value||30}, get height(){return +$("#height").value||0} };
+const AUTO={slow:1};
 const idx = () => setting.hand==="R"
   ? {sh:12, el:14, wr:16, hip:24, lhip:23, lknee:25, lank:27, bank:28, osh:11}
   : {sh:11, el:13, wr:15, hip:23, lhip:24, lknee:26, lank:28, bank:27, osh:12};
@@ -395,6 +423,7 @@ class Card{
       v.addEventListener("seeked",done); v.currentTime=t; setTimeout(done,1500); });
   }
   async analyze(){
+    if(!setting.height){ this.msg("請先在上方「投手與影片設定」填投手身高。"); $("#height").focus(); return; }
     const btn=$('[data-act="analyze"]',this.root); btn.disabled=true;
     try{
       const lm=await getLandmarker(t=>this.msg(t));
@@ -415,6 +444,7 @@ class Card{
       this.rawFrames=frames;
       this.frames=smooth(frames);
       this.hpx=estHeightPx(this.frames);
+      if($("#slow").value==="auto") AUTO.slow=pickSlow([R,P].filter(c=>c===this||(c.frames&&c.hpx)));
       this.ruleEvents=detectEvents(this.frames);
       this.events={...this.ruleEvents}; this.eventSource="rule";
       try{ this.msg("AI 偵測抬腿、落地、出手中…"); this.events=await aiEvents(this); this.eventSource="ai"; }
@@ -423,7 +453,7 @@ class Card{
       try{ this.aiAng=await aiAngles(this); }catch(e){ console.error(e); }
       this.autoEvents={...this.events}; this.corrections=[];
       this.msg(`完成：${frames.length} 張畫面偵測到骨架。`+(this.eventSource==="ai"?"抬腿、落地、出手由 AI 偵測。":"AI 模型無法載入，抬腿、落地、出手改用規則判斷。"));
-      this.renderEvents(); onDataChange(); this.seek(this.frames[this.events.fc].t);
+      this.renderEvents(); onDataChange(); await autoSlowCheck(false); this.seek(this.frames[this.events.fc].t);
     }catch(e){ console.error(e); this.msg("分析失敗："+(e.message||e)); }
     btn.disabled=false;
   }
@@ -602,10 +632,13 @@ function report(){
     }
   }
   tb.innerHTML=rows.join("");
+  const vr=c=>{ const f=c.frames[c.events.fc].lm, sw=Math.hypot(f[11].x-f[12].x,f[11].y-f[12].y), tl=Math.hypot((f[11].x+f[12].x-f[23].x-f[24].x)/2,(f[11].y+f[12].y-f[23].y-f[24].y)/2); return tl?sw/tl:NaN; };
+  const rr=vr(R), rp=vr(P), viewWarn=isFinite(rr)&&isFinite(rp)&&Math.abs(rr-rp)>0.25
+    ? `<div class="issue r" style="grid-column:1/-1"><h3>兩支影片的拍攝角度可能不同</h3><p>前腳落地時的肩寬比例：標準 ${rr.toFixed(2)}、練習 ${rp.toFixed(2)}，差異很大。角度比較只能參考，建議用相同的位置和距離重新拍攝。</p></div>` : "";
   probs.sort((x,y)=>y.score-x.score);
-  is.innerHTML = probs.length ? probs.slice(0,3).map(p=>`<div class="issue ${p.st}"><h3>${p.c[0]}</h3>
+  is.innerHTML = viewWarn + (probs.length ? probs.slice(0,3).map(p=>`<div class="issue ${p.st}"><h3>${p.c[0]}</h3>
      <p class="mono">${p.d.name}：差異 ${(p.diff>0?"+":"")+fmt(p.diff,p.d.unit)} ${p.d.unit}</p><p>${p.c[1]}</p><p class="drill">${p.c[2]}</p></div>`).join("")
-    : `<div class="issue" style="border-left-color:var(--good)"><h3>動作與標準非常接近</h3><p>所有檢查項目都在容許範圍內，維持目前的動作。</p></div>`;
+    : `<div class="issue" style="border-left-color:var(--good)"><h3>動作與標準非常接近</h3><p>所有檢查項目都在容許範圍內，維持目前的動作。</p></div>`);
 }
 
 /* ---------- 骨架 DTW 自動對齊（與 train_tcc.py 的特徵處理一致） ---------- */
@@ -964,12 +997,18 @@ function quality(c){
 function evOut(c,E){ return Object.fromEntries(["kh","fc","br"].map(k=>[k,{frame:E[k], t:r4(c.frames[E[k]].t), tReal:r4(realT(c.frames[E[k]].t))}])); }
 async function grabFrames(c){
   const v=c.video, back=v.currentTime, br=c.frames[c.events.br].t, step=1/setting.vfps, out=[];
-  const W=v.videoWidth, H=v.videoHeight, s=Math.min(1,640/W);
-  const cv=document.createElement("canvas"); cv.width=Math.round(W*s); cv.height=Math.round(H*s); const g=cv.getContext("2d");
+  const W=v.videoWidth, H=v.videoHeight;
+  const cv=document.createElement("canvas"); const g=cv.getContext("2d");
   for(let k=-3;k<=10;k++){
     const t=br+k*step; if(t<0||t>v.duration) continue;
-    await c.seek(t); g.drawImage(v,0,0,cv.width,cv.height);
-    out.push({offsetFrames:k, t:r4(t), tReal:r4(realT(t)), width:cv.width, height:cv.height, jpg:cv.toDataURL("image/jpeg",0.8)});
+    await c.seek(t);
+    // 只保留投手周圍的範圍，減少背景人物入鏡
+    const lm=c.frames[c.nearest(t)].lm, pts=[0,11,12,13,14,15,16,23,24,25,26,27,28,31,32].map(j=>lm[j]).filter(p=>p.v>0.3);
+    let x0=Math.min(...pts.map(p=>p.x)), x1=Math.max(...pts.map(p=>p.x)), y0=Math.min(...pts.map(p=>p.y)), y1=Math.max(...pts.map(p=>p.y));
+    const pad=0.25*Math.max(x1-x0,y1-y0); x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(W,x1+pad); y1=Math.min(H,y1+pad);
+    const cw=x1-x0, ch=y1-y0, k2=Math.min(1,480/Math.max(cw,ch)); cv.width=Math.round(cw*k2); cv.height=Math.round(ch*k2);
+    g.drawImage(v,x0,y0,cw,ch,0,0,cv.width,cv.height);
+    out.push({offsetFrames:k, t:r4(t), tReal:r4(realT(t)), crop:[r4(x0/W),r4(y0/H),r4(cw/W),r4(ch/H)], width:cv.width, height:cv.height, jpg:cv.toDataURL("image/jpeg",0.8)});
   }
   await c.seek(back);
   return out;
@@ -1090,7 +1129,14 @@ const R=new Card("ref","--ref"), P=new Card("prac","--prac");
 for(const c of [R,P]) c.video.addEventListener("seeked",()=>onCardSeeked(c));
 function onDataChange(){ computeAlign(); cacheSeries(); setupSync(); renderAlign(); report(); chart(); updateSpeed(); renderQuality(); renderSlowHint(); renderShootChecks(); }
 $("#hand").addEventListener("change",()=>{ [R,P].forEach(c=>{ if(c.frames){ c.ruleEvents=detectEvents(c.frames); if(c.eventSource!=="ai"){ c.events={...c.ruleEvents}; c.autoEvents={...c.events}; c.corrections=[]; } else c.events.dir=c.ruleEvents.dir; c.renderEvents(); } c.draw(); }); onDataChange(); });
-$("#slow").addEventListener("change",()=>reanalyzeAI());
+$("#slow").addEventListener("change",()=>{ if($("#slow").value==="auto") autoSlowCheck(true); else reanalyzeAI(); });
+async function autoSlowCheck(force){
+  if($("#slow").value!=="auto") return false;
+  const cards=[R,P].filter(c=>c.frames&&c.hpx); if(!cards.length) return false;
+  const best=pickSlow(cards);
+  if(best!==AUTO.slow || force){ AUTO.slow=best; await reanalyzeAI(); return true; }
+  return false;
+}
 async function reanalyzeAI(){
   for(const c of [R,P]){
     if(!c.frames) continue;
@@ -1108,9 +1154,19 @@ function wristSpeedVideo(c){ // 投球手腕速度第 95 百分位（像素／�
   v.sort((a,b)=>a-b); return v[Math.floor(v.length*0.95)]||0;
 }
 function speedMs(c, slow){ return wristSpeedVideo(c)*slow*(setting.height/100)/(c.hpx||1); }
+function pickSlow(cards){
+  const avg=f=>cards.map(c=>speedMs(c,f)).reduce((a,x)=>a+x,0)/cards.length;
+  return [1,2,4,8].reduce((b,f)=>Math.abs(Math.log(avg(f)/22))<Math.abs(Math.log(avg(b)/22))?f:b,1);
+}
 function renderSlowHint(){
   const box=$("#slowHint"), cards=[R,P].filter(c=>c.frames&&c.hpx);
   if(!cards.length){ box.innerHTML=""; return; }
+  if($("#slow").value==="auto"){
+    const sp=cards.map(c=>speedMs(c,AUTO.slow)).reduce((a,x)=>a+x,0)/cards.length;
+    const nm={1:"一般速度",2:"慢動作 60fps（2×）",4:"慢動作 120fps（4×）",8:"慢動作 240fps（8×）"}[AUTO.slow];
+    box.innerHTML=`<div class="hint" style="border-left-color:var(--good);background:var(--good-bg)"><span>自動判斷為 <b>${nm}</b>（投球手腕最快約 ${sp.toFixed(0)} m/s）。若和實際拍攝方式不同，請在上方手動選擇。</span></div>`;
+    return;
+  }
   const cur=setting.slow, sp=cards.map(c=>speedMs(c,cur)), avg=sp.reduce((a,b)=>a+b,0)/sp.length;
   if(avg>=10 && avg<=40){ box.innerHTML=""; return; }
   const best=[1,2,4,8].reduce((b,f)=>Math.abs(Math.log(cards.map(c=>speedMs(c,f)).reduce((a,x)=>a+x,0)/cards.length/22))<Math.abs(Math.log(cards.map(c=>speedMs(c,b)).reduce((a,x)=>a+x,0)/cards.length/22))?f:b,1);
@@ -1128,7 +1184,7 @@ function renderShootChecks(){
     for(let i=Math.max(0,a-5);i<=Math.min(c.frames.length-1,b+8);i++){ n++; if(J.some(j=>{ const p=c.frames[i].lm[j]; return p.x<0||p.x>W||p.y<0||p.y>H; })) out++; }
     if(n && out/n>0.1) items.push(`投球過程中有 ${Math.round(out/n*100)}% 的畫面，身體或手臂超出畫面。${H>W?"建議手機橫拿，":""}站遠一點，讓全身和出手後的手臂都入鏡。`);
     const f=c.frames[E.fc]?.lm; if(f){ const sw=Math.hypot(f[11].x-f[12].x,f[11].y-f[12].y), tl=Math.hypot((f[11].x+f[12].x-f[23].x-f[24].x)/2,(f[11].y+f[12].y-f[23].y-f[24].y)/2);
-      if(tl>0 && sw/tl>0.5) items.push("前腳落地時肩膀看起來很寬，鏡頭可能不是正側面。請從投球手的另一側（右投從三壘側）、和投球方向垂直的位置拍攝，兩支影片的角度要相同。"); }
+      if(tl>0 && sw/tl>0.5) items.push("前腳落地時肩膀看起來很寬，鏡頭可能不是正側面。請站在投球手臂那一側（右投站三壘側、左投站一壘側），和投球方向垂直拍攝，兩支影片的位置要相同。"); }
     const q=quality(c); if(!q.checks.boneStability) items.push("骨架抖動較大，可能是光線不足、手持晃動或動作模糊。建議用腳架、在明亮處拍攝。");
     box.innerHTML=items.length?items.map(t=>`<div>${t}</div>`).join(""):(c.frames?`<div class="ok">拍攝檢查通過。</div>`:"");
   }
