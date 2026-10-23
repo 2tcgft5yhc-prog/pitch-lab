@@ -66,7 +66,7 @@ button.on{background:var(--ink);color:var(--panel)}
 .ev button{padding:3px 6px;font-size:.75rem}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 input[type=range]{width:100%;accent-color:var(--accent)}
-.ticks{position:relative;height:18px;font:600 .7rem var(--f-mono);color:var(--muted)}
+.ticks{position:relative;height:30px;font:600 .7rem var(--f-mono);color:var(--muted)}
 .ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 .tablewrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:640px}
@@ -393,7 +393,7 @@ class Card{
     if(this.url) URL.revokeObjectURL(this.url);
     this.url=URL.createObjectURL(file);
     this.video.src=this.url; this.video.hidden=false; this.empty.hidden=true; this.video.controls=true;
-    this.frames=null; this.rawFrames=null; this.events=null; this.autoEvents=null; this.corrections=[]; this.calib=[]; this.ball=[]; this.hpx=null;
+    this.gen=(this.gen||0)+1; this.frames=null; this.rawFrames=null; this.events=null; this.autoEvents=null; this.corrections=[]; this.calib=[]; this.ball=[]; this.hpx=null;
     this.fileName=file.name; this.fileSize=file.size;
     $('[data-act="analyze"]',this.root).disabled=false; this.msg("可先設定分析範圍（只包含一次投球），再按「分析骨架」。"); this.prog(0);
     this.renderEvents(); onDataChange();
@@ -428,18 +428,53 @@ class Card{
     try{
       const lm=await getLandmarker(t=>this.msg(t));
       const v=this.video; v.pause();
-      const [a,b]=this.range, dt=1/setting.srate, frames=[];
+      let wake=null; try{ wake=await navigator.wakeLock?.request("screen"); }catch(e){}   // 分析期間保持螢幕常亮
+      const [a,b]=this.range, dt=1/setting.srate, frames=[], W=v.videoWidth, H=v.videoHeight;
       const n=Math.max(2,Math.floor((b-a)/dt)+1);
-      for(let i=0;i<n;i++){
-        const t=a+i*dt; await this.seek(t);
+      const thumb=document.createElement("canvas"); thumb.width=360; thumb.height=Math.round(360*H/W); const tg=thumb.getContext("2d");
+      const pending=[];
+      const process=(t)=>{
         tsCounter+=33;
         const r=lm.detectForVideo(v, tsCounter);
-        if(r.landmarks && r.landmarks[0]){
-          const W=v.videoWidth,H=v.videoHeight;
-          frames.push({t, lm:r.landmarks[0].map(p=>({x:p.x*W,y:p.y*H,v:p.visibility??1})), wl:r.worldLandmarks?.[0]?.map(p=>({x:p.x,y:p.y,z:p.z}))||null});
-        }
-        this.prog((i+1)/n); this.msg(`分析中 ${i+1}/${n}`);
+        if(!(r.landmarks && r.landmarks[0])) return;
+        const fr={t, lm:r.landmarks[0].map(p=>({x:p.x*W,y:p.y*H,v:p.visibility??1})), wl:r.worldLandmarks?.[0]?.map(p=>({x:p.x,y:p.y,z:p.z}))||null, img:null};
+        tg.drawImage(v,0,0,thumb.width,thumb.height);                      // 對照播放用的縮圖
+        pending.push(new Promise(res=>thumb.toBlob(bl=>{ fr.img=bl; res(); },"image/jpeg",0.72)));
+        frames.push(fr);
+      };
+      let fast=false;
+      if("requestVideoFrameCallback" in v){
+        // 快速模式：讓影片自己慢速播放、邊播邊分析，不必逐格跳轉
+        try{
+          await this.seek(a); v.muted=true; v.playbackRate=0.5;
+          let last=-1, done=false;
+          await new Promise((resolve,reject)=>{
+            const finish=()=>{ if(done) return; done=true; v.pause(); document.removeEventListener("visibilitychange",onVis); resolve(); };
+            const onVis=()=>{ if(!document.hidden && !done){ this.msg("繼續分析…"); v.play().catch(()=>{}); } };
+            document.addEventListener("visibilitychange",onVis);
+            const onFrame=(now,meta)=>{
+              if(done) return;
+              const t=meta.mediaTime;
+              if(t>=b-1e-3){ finish(); return; }
+              if(t>=a && t-last>=dt*0.9){ last=t; process(t); this.prog(Math.min(1,(t-a)/(b-a))); this.msg(`分析中 ${frames.length}/${n}（請保持畫面開啟）`); }
+              v.requestVideoFrameCallback(onFrame);
+            };
+            v.requestVideoFrameCallback(onFrame);
+            v.addEventListener("ended",finish,{once:true});
+            v.play().then(()=>{ fast=true; }).catch(e=>{ done=true; document.removeEventListener("visibilitychange",onVis); reject(e); });
+          });
+          v.playbackRate=1;
+          if(frames.length<n*0.5){ frames.length=0; pending.length=0; fast=false; }   // 取到的畫面太少就改用逐格模式
+        }catch(e){ console.warn("快速分析失敗，改用逐格模式",e); frames.length=0; pending.length=0; fast=false; v.playbackRate=1; }
       }
+      if(!fast){
+        for(let i=0;i<n;i++){
+          const t=a+i*dt; await this.seek(t); process(t);
+          this.prog((i+1)/n); this.msg(`分析中 ${i+1}/${n}（請保持畫面開啟）`);
+        }
+      }
+      await Promise.all(pending);
+      try{ await wake?.release(); }catch(e){}
       if(frames.length<10) throw new Error("偵測到的骨架太少，請確認全身入鏡、光線充足，或調整分析範圍。");
       this.rawFrames=frames;
       this.frames=smooth(frames);
@@ -793,18 +828,37 @@ function anchorPairs(){
   return ok?{a,b}:null;
 }
 function warp(tRefReal){ // 標準影片真實時間 → 練習影片真實時間
-  if(useDTW()){
-    const base=ALIGN.r2p(tRefReal), ap=anchorPairs();
-    if(!ap) return base;
-    return base+residualInterp(tRefReal, ap.a, ap.a.map((x,i)=>ap.b[i]-ALIGN.r2p(x)));
-  }
-  const a=anchors(R), b=anchors(P);
-  let s=0; while(s<3 && tRefReal>a[s+1]) s++;
-  const u=(tRefReal-a[s])/((a[s+1]-a[s])||1e-6);
-  return b[s]+u*(b[s+1]-b[s]);
+  // 抬腿之前、出手之後用 1:1 真實時間；抬腿到出手之間用錨點固定＋骨架逐格對應
+  const ap=anchorPairs() || (()=>{ const A=anchors(R), B=anchors(P); return {a:[A[1],A[2],A[3]], b:[B[1],B[2],B[3]]}; })();
+  if(tRefReal<=ap.a[0]) return ap.b[0]+(tRefReal-ap.a[0]);
+  if(tRefReal>=ap.a[2]) return ap.b[2]+(tRefReal-ap.a[2]);
+  if(useDTW()){ const base=ALIGN.r2p(tRefReal); return base+residualInterp(tRefReal, ap.a, ap.a.map((x,i)=>ap.b[i]-ALIGN.r2p(x))); }
+  const s_=tRefReal<=ap.a[1]?0:1, u=(tRefReal-ap.a[s_])/((ap.a[s_+1]-ap.a[s_])||1e-6);
+  return ap.b[s_]+u*(ap.b[s_+1]-ap.b[s_]);
+}
+function unwarpT(tp){ // 練習影片真實時間 → 標準影片真實時間（warp 的反向）
+  const ap=anchorPairs() || (()=>{ const A=anchors(R), B=anchors(P); return {a:[A[1],A[2],A[3]], b:[B[1],B[2],B[3]]}; })();
+  if(tp<=ap.b[0]) return ap.a[0]+(tp-ap.b[0]);
+  if(tp>=ap.b[2]) return ap.a[2]+(tp-ap.b[2]);
+  if(useDTW()){ const base=ALIGN.p2r(tp); return base+residualInterp(tp, ap.b, ap.b.map((x,i)=>ap.a[i]-ALIGN.p2r(x))); }
+  const s_=tp<=ap.b[1]?0:1, u=(tp-ap.b[s_])/((ap.b[s_+1]-ap.b[s_])||1e-6);
+  return ap.a[s_]+u*(ap.a[s_+1]-ap.a[s_]);
 }
 /* ---------- 對照播放 ---------- */
-const cmp={playing:false, frac:0, last:0, busy:{}, busyAt:{}, want:{}};
+const cmp={playing:false, frac:0, last:0, busy:{}, busyAt:{}, want:{}, lastBm:{}, tr:null, tp:null};
+const bmCache=new Map();
+function getBitmap(c,i){
+  const f=c.frames[i]; if(!f?.img) return null;
+  const k=c.key+(c.gen||0)+":"+i;
+  if(bmCache.has(k)) return bmCache.get(k);
+  bmCache.set(k,null);
+  createImageBitmap(f.img).then(bm=>{
+    bmCache.set(k,bm);
+    while(bmCache.size>60){ const first=bmCache.keys().next().value; const old=bmCache.get(first); if(old && old!==cmp.lastBm.ref && old!==cmp.lastBm.prac) old.close?.(); bmCache.delete(first); }
+    drawCmp();
+  }).catch(()=>bmCache.delete(k));
+  return null;
+}
 function seekCard(c,t){
   const k=c.key; t=Math.max(0,Math.min(c.video.duration||t,t)); cmp.want[k]=t;
   if(cmp.busy[k] && performance.now()-(cmp.busyAt[k]||0)<600) return;   // 上一次跳轉還沒完成；超過 0.6 秒視為卡住，重新跳轉
@@ -815,36 +869,51 @@ function onCardSeeked(c){
   if(cmp.want[k]!=null && Math.abs(cmp.want[k]-c.video.currentTime)>0.004){ seekCard(c,cmp.want[k]); }
   drawCmp();
 }
+function unwarp(tp){ // 練習影片真實時間 → 標準影片真實時間
+  if(useDTW()){ const base=ALIGN.p2r(tp), ap=anchorPairs(); return ap? base+residualInterp(tp, ap.b, ap.b.map((x,i)=>ap.a[i]-ALIGN.p2r(x))) : base; }
+  const a=anchors(R), b=anchors(P); let s=0; while(s<3&&tp>b[s+1]) s++; const u=(tp-b[s])/((b[s+1]-b[s])||1e-6); return a[s]+u*(a[s+1]-a[s]);
+}
+function computePlayRange(){ // 只播放兩支影片都有對應畫面的那一段（以標準影片時間表示）
+  const a=anchors(R), b=anchors(P), N=400; let s0=a[0], s1=a[4];
+  for(let i=0;i<=N;i++){ const t=a[0]+(a[4]-a[0])*i/N; if(warp(t)<=b[0]+0.01) s0=t; }   // 練習影片還停在第一格的部分
+  for(let i=N;i>=0;i--){ const t=a[0]+(a[4]-a[0])*i/N; if(warp(t)>=b[4]-0.01) s1=t; }   // 練習影片已經到最後一格的部分
+  return (s1>s0+0.05)?[s0,s1]:[a[0],a[4]];
+}
+const playRange=()=>cmp.range||computePlayRange();
+const hasThumbs=()=>!!(R.frames?.[0]?.img && P.frames?.[0]?.img);
 function syncTo(frac){
   if(!(R.frames&&P.frames)) return;
   cmp.frac=Math.max(0,Math.min(1,frac));
-  const a=anchors(R), tr=a[0]+cmp.frac*(a[4]-a[0]), tp=warp(tr);
-  R.video.pause(); P.video.pause();
-  seekCard(R,tr*setting.slow); seekCard(P,tp*setting.slow);
+  const [s0,s1]=playRange(), a=anchors(R), tr=s0+cmp.frac*(s1-s0), tp=warp(tr);
+  cmp.tr=tr; cmp.tp=tp;
+  if(hasThumbs()) drawCmp();   // 用分析時存下的縮圖播放，不必跳轉影片
+  else { R.video.pause(); P.video.pause(); seekCard(R,tr*setting.slow); seekCard(P,tp*setting.slow); }
   $("#syncT").textContent=`距前腳落地 ${((tr-a[2])*1000).toFixed(0)} ms`;
   $("#syncSlider").value=Math.round(cmp.frac*1000);
 }
 function setupSync(){
   const ok=!!(R.frames&&P.frames);
+  cmp.range=ok?computePlayRange():null;
   ["#syncPlay","#syncSlider","#cmpPrev","#cmpNext","[data-jump=kh]","[data-jump=fc]","[data-jump=br]"].forEach(s=>$(s).disabled=!ok);
   const tk=$("#ticks"); tk.innerHTML="";
   if(!ok){ drawCmp(); return; }
-  const a=anchors(R), L=a[4]-a[0];
-  [["抬腿",a[1]],["落地",a[2]],["出手",a[3]]].forEach(([n,t])=>{ const s=document.createElement("span"); s.style.left=((t-a[0])/L*100)+"%"; s.textContent=n; tk.appendChild(s); });
-  drawCmp();
+  const a=anchors(R), [s0,s1]=playRange(), L=s1-s0;
+  let lastX=-99;
+  [["抬腿",a[1]],["落地",a[2]],["出手",a[3]]].forEach(([n,t])=>{ const x=(t-s0)/L*100; if(x<0||x>100) return; const s=document.createElement("span"); s.style.left=x+"%"; if(x-lastX<9) s.style.top="12px"; lastX=x; s.textContent=n; tk.appendChild(s); });
+  syncTo(cmp.frac||0);
 }
-const stepFrac=()=>{ const a=anchors(R); return (1/CANON_FPS)/((a[4]-a[0])||1); };
+const stepFrac=()=>{ const [s0,s1]=playRange(); return (1/CANON_FPS)/((s1-s0)||1); };
 function stopPlay(){ cmp.playing=false; $("#syncPlay").textContent="▶ 播放"; }
 function tick(ts){
   if(!cmp.playing) return;
-  for(const c of [R,P]) if(cmp.busy[c.key] && performance.now()-(cmp.busyAt[c.key]||0)>600) seekCard(c,cmp.want[c.key]);
+  if(!hasThumbs()) for(const c of [R,P]) if(cmp.busy[c.key] && performance.now()-(cmp.busyAt[c.key]||0)>600) seekCard(c,cmp.want[c.key]);
   const dt=Math.min(0.1,(ts-cmp.last)/1000); cmp.last=ts;
-  const a=anchors(R), f=cmp.frac+dt*(+$("#cmpSpeed").value)/((a[4]-a[0])||1);
+  const [s0,s1]=playRange(), f=cmp.frac+dt*(+$("#cmpSpeed").value)/((s1-s0)||1);
   if(f>=1){ syncTo(1); stopPlay(); return; }
   syncTo(f); requestAnimationFrame(tick);
 }
 $("#syncSlider").addEventListener("input",e=>{ stopPlay(); syncTo(e.target.value/1000); });
-document.querySelectorAll("[data-jump]").forEach(b=>b.addEventListener("click",()=>{ stopPlay(); const a=anchors(R), k={kh:1,fc:2,br:3}[b.dataset.jump]; syncTo((a[k]-a[0])/(a[4]-a[0])); }));
+document.querySelectorAll("[data-jump]").forEach(b=>b.addEventListener("click",()=>{ stopPlay(); const a=anchors(R), [s0,s1]=playRange(), k={kh:1,fc:2,br:3}[b.dataset.jump]; syncTo((a[k]-s0)/(s1-s0)); }));
 $("#cmpPrev").addEventListener("click",()=>{ stopPlay(); syncTo(cmp.frac-stepFrac()); });
 $("#cmpNext").addEventListener("click",()=>{ stopPlay(); syncTo(cmp.frac+stepFrac()); });
 $("#syncPlay").addEventListener("click",()=>{
@@ -858,16 +927,25 @@ function cacheSeries(){ for(const c of [R,P]) c.S=c.frames?{knee:series(c,"knee"
 function drawCmp(){
   const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const pairs=[[R,$("#cmpL"),css("--ref")],[P,$("#cmpR"),css("--prac")]], I=idx(), dpr=window.devicePixelRatio||1;
-  const iR=R.frames?R.nearest(R.video.currentTime):-1, iP=P.frames?P.nearest(P.video.currentTime):-1;
+  const th=hasThumbs();
+  const curT=c=>th&&cmp.tr!=null?(c===R?cmp.tr:cmp.tp)*setting.slow:c.video.currentTime;
+  const iR=R.frames?R.nearest(curT(R)):-1, iP=P.frames?P.nearest(curT(P)):-1;
   for(const [c,cv,col] of pairs){
     const g=cv.getContext("2d"), v=c.video, vw=v.videoWidth, vh=v.videoHeight, cw=cv.clientWidth||300;
     const maxH=window.innerHeight*0.6; let w=cw, h=vw?cw*vh/vw:cw*0.75; if(h>maxH){ w=w*maxH/h; h=maxH; }
     if(cv.width!==Math.round(cw*dpr)||cv.height!==Math.round(h*dpr)){ cv.width=Math.round(cw*dpr); cv.height=Math.round(h*dpr); cv.style.height=h+"px"; }
     g.setTransform(dpr,0,0,dpr,0,0); g.fillStyle="#000"; g.fillRect(0,0,cw,h);
-    if(!vw || v.readyState<2){ g.fillStyle="#9aa6b2"; g.font="13px sans-serif"; g.fillText("分析兩支影片後顯示",12,24); continue; }
-    const ox=(cw-w)/2, s=w/vw; g.drawImage(v,ox,0,w,h);
+    const ox=(cw-w)/2, s=w/(vw||1);
+    if(th && c.frames){
+      const i0=c===R?iR:iP, bm=getBitmap(c,i0);
+      if(bm) cmp.lastBm[c.key]=bm;
+      if(cmp.lastBm[c.key]) g.drawImage(cmp.lastBm[c.key],ox,0,w,h);
+    } else {
+      if(!vw || v.readyState<2){ g.fillStyle="#9aa6b2"; g.font="13px sans-serif"; g.fillText("分析兩支影片後顯示",12,24); continue; }
+      g.drawImage(v,ox,0,w,h);
+    }
     if(!c.frames) continue;
-    const i=c.nearest(v.currentTime), f=c.frames[i]; if(!f) continue;
+    const i=c===R?iR:iP, f=c.frames[i]; if(!f) continue;
     const P2=q=>[ox+q.x*s, q.y*s];
     // 標準骨架疊在練習影片上
     if(c===P && $("#cmpGhost").checked && iR>=0){
@@ -907,8 +985,7 @@ function chart(){
   const k=$("#chartMetric").value, a=anchors(R), b=anchors(P);
   const sr=series(R,k).map((v,i)=>[(realT(R.frames[i].t)-a[2])*1000,v]);
   // 練習影片：反向分段映射到標準時間軸
-  const apc=anchorPairs();
-  const inv=useDTW()? (t=>{ const base=ALIGN.p2r(t); return apc? base+residualInterp(t, apc.b, apc.b.map((x,i)=>apc.a[i]-ALIGN.p2r(x))) : base; }) : (t=>{ let s=0; while(s<3&&t>b[s+1]) s++; const u=(t-b[s])/((b[s+1]-b[s])||1e-6); return a[s]+u*(a[s+1]-a[s]); });
+  const inv=unwarpT;
   const sp=series(P,k).map((v,i)=>[(inv(realT(P.frames[i].t))-a[2])*1000,v]);
   const all=[...sr,...sp].filter(p=>!isNaN(p[1]));
   const x0=Math.min(...all.map(p=>p[0])), x1=Math.max(...all.map(p=>p[0]));
