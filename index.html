@@ -976,7 +976,9 @@ class Card{
       catch(e){ console.error(e); this.aiError=String(e.message||e); }
       this.aiAng=null;
       try{ this.aiAng=await aiAngles(this); }catch(e){ console.error(e); }
+      this.aiSlow=setting.slow;
       this.autoEvents={...this.events}; this.corrections=[];
+      await refreshStaleAI();   // 加入這支影片後倍率可能改變，另一支要用新倍率重算
       this.live=null; this.setState("done");
       this.narr("");
       onDataChange(); await autoSlowCheck(false); this.seek(this.frames[this.events.fc].t);
@@ -1312,12 +1314,16 @@ function unwarpT(tp){ // 練習影片真實時間 → 標準影片真實時間�
 
 
 /* ---------- 報告 ---------- */
+const VIEW_2D_ONLY=new Set(["stride","sep"]);   // 只能從 2D 畫面量、斜拍就不準的項目
+function viewRatio(c){ const f=c.frames[c.events.fc].lm, sw=Math.hypot(f[11].x-f[12].x,f[11].y-f[12].y), tl=Math.hypot((f[11].x+f[12].x-f[23].x-f[24].x)/2,(f[11].y+f[12].y-f[23].y-f[24].y)/2); return tl?sw/tl:NaN; }
+const isSide=c=>!(viewRatio(c)>0.5);
 function buildReport(){
-  const mr=metrics(R), mp=metrics(P), rows=[], probs=[];
+  const mr=metrics(R), mp=metrics(P), rows=[], probs=[], side=isSide(R)&&isSide(P);
   for(const d of DEFS){
     const a=mr[d.k], b=mp[d.k], diff=b-a;
     let st="g", txt="良好", safety=false;
     if(isNaN(diff)){ st=""; txt="無法計算"; }
+    else if(!side && VIEW_2D_ONLY.has(d.k)){ rows.push({d,a,b,diff,st:"",txt:"非側面，無法判斷",safety:false}); continue; }
     else if(Math.abs(diff)>2*d.tol){ st="r"; txt="優先修正"; }
     else if(Math.abs(diff)>d.tol){ st="y"; txt="可調整"; }
     if(d.k==="abdFC" && (b<75 || mp.elbowRel<-4)){ st="r"; txt="安全警示"; safety=true; }
@@ -1329,9 +1335,8 @@ function buildReport(){
     }
   }
   probs.sort((x,y)=>y.score-x.score);
-  const vr=c=>{ const f=c.frames[c.events.fc].lm, sw=Math.hypot(f[11].x-f[12].x,f[11].y-f[12].y), tl=Math.hypot((f[11].x+f[12].x-f[23].x-f[24].x)/2,(f[11].y+f[12].y-f[23].y-f[24].y)/2); return tl?sw/tl:NaN; };
-  const rr=vr(R), rp=vr(P);
-  return {rows, probs, view:{rr,rp,bad:isFinite(rr)&&isFinite(rp)&&Math.abs(rr-rp)>0.25}};
+  const rr=viewRatio(R), rp=viewRatio(P);
+  return {rows, probs, view:{rr,rp,side,bad:isFinite(rr)&&isFinite(rp)&&Math.abs(rr-rp)>0.25}};
 }
 const unitSuffix=u=>u==="°"?"°":u==="ms"?" ms":u.startsWith("%")?"%":"";
 const ARC_OK=new Set(["kneeFC","abdFC","elbowFC","trunkBR"]);
@@ -1356,7 +1361,7 @@ function report(){
   if(!top){
     $("#vKicker").textContent="和標準相比";
     $("#vHead").textContent="動作和標準幾乎一樣";
-    $("#vNum").className="vnum ok"; $("#vNum").innerHTML=`<b>${nOk}/${rows.length}</b><span>項都在容許範圍內，維持目前的動作。</span>`;
+    $("#vNum").className="vnum ok"; $("#vNum").innerHTML=`<b>${nOk}/${rows.filter(r=>r.st).length}</b><span>項都在容許範圍內，維持目前的動作。</span>`;
   } else {
     $("#vKicker").textContent=top.safety?"先處理這一項，和受傷風險有關":"最需要調整的是";
     $("#vHead").textContent=top.c[0];
@@ -1369,6 +1374,7 @@ function report(){
     return `<li class="${w}"><b>${PH_NAME[ph]}</b>${nm[w]}</li>`; }).join("");
   // 提醒
   let bn="";
+  if(!view.side && !view.bad) bn+=`<div class="banner"><b>影片不是正側面拍的</b><span>跨步距離和髖肩分離只能從側面量，這次不列入判斷；其他角度由 AI 校正，但斜角越大誤差越大。下次請站在投球手臂那一側、和投球方向垂直拍攝。</span></div>`;
   if(view.bad) bn+=`<div class="banner r"><b>兩支影片的拍攝角度可能不同</b><span>前腳落地時的肩寬比例差很多（標準 ${view.rr.toFixed(2)}、練習 ${view.rp.toFixed(2)}），角度比較只能參考。下次請用相同的位置和距離拍攝。</span></div>`;
   const sh=slowWarn(); if(sh) bn+=sh;
   $("#banners").innerHTML=bn; $("#useSlow")?.addEventListener("click",e=>{ $("#slow").value=e.target.dataset.v; reanalyzeAI(); });
@@ -1380,7 +1386,7 @@ function report(){
       <div class="metric">${ARC_OK.has(p.d.k)&&isFinite(p.a)&&isFinite(p.b)?arcSVG(p.a,p.b):""}<div><b class="num">${fmtDiff(p.diff,p.d.unit)}${us}</b><small>${p.d.name}：標準 ${fmt(p.a,p.d.unit)}${us}，你 ${fmt(p.b,p.d.unit)}${us}</small></div></div>
       <p>${p.c[1]}</p><p class="drill">${p.c[2]}</p>
       <button class="btn" data-see="${p.d.phase==="出手"?"br":"fc"}">在影片中看${p.d.phase==="出手"?"出手":"落地"}那一刻</button></article>`; }).join("")
-    : `<article class="issue g"><span class="tg">全部通過</span><h4>八個檢查項目都在容許範圍內</h4><p>和標準動作非常接近。可以換一支新的練習影片，持續追蹤。</p></article>`;
+    : `<article class="issue g"><span class="tg">全部通過</span><h4>${rows.filter(r=>r.st).length} 個檢查項目都在容許範圍內</h4><p>和標準動作非常接近。可以換一支新的練習影片，持續追蹤。</p></article>`;
   $$("[data-see]",is).forEach(b=>b.addEventListener("click",()=>{ stopPlay(); jumpTo(b.dataset.see); $(".player").scrollIntoView({behavior:REDUCED?"auto":"smooth",block:"start"}); }));
 }
 
@@ -1853,9 +1859,25 @@ async function reanalyzeAI(){
     c.ruleEvents=detectEvents(c.frames); c.events={...c.ruleEvents}; c.eventSource="rule";
     try{ c.events=await aiEvents(c); c.eventSource="ai"; }catch(e){ console.error(e); }
     try{ c.aiAng=await aiAngles(c); }catch(e){ c.aiAng=null; }
-    c.autoEvents={...c.events}; c.corrections=[];
+    c.aiSlow=setting.slow; c.autoEvents={...c.events}; c.corrections=[];
   }
   onDataChange();
+}
+// AI 時間點與角度都依「真實時間」計算；慢動作倍率改變後，用舊倍率算的結果要重算
+async function refreshStaleAI(){
+  let changed=false;
+  for(const c of [R,P]){
+    if(!c.frames || c.aiSlow===setting.slow) continue;
+    c.ruleEvents=detectEvents(c.frames);
+    if(!(c.corrections&&c.corrections.length)){
+      c.events={...c.ruleEvents}; c.eventSource="rule";
+      try{ c.events=await aiEvents(c); c.eventSource="ai"; }catch(e){ console.error(e); }
+      c.autoEvents={...c.events};
+    } else c.events.dir=c.ruleEvents.dir;
+    try{ c.aiAng=await aiAngles(c); }catch(e){ c.aiAng=null; }
+    c.aiSlow=setting.slow; changed=true;
+  }
+  return changed;
 }
 function wristSpeedVideo(c){ // 投球手腕速度第 95 百分位（像素／影片秒）
   const I=idx(), F=c.frames, v=[];
