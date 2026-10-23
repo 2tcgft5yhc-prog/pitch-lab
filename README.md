@@ -10,8 +10,8 @@
 
 ## 使用的模型
 - 姿勢辨識：Google MediaPipe Pose Landmarker
-- 錨點偵測模型、角度模型：以 [Driveline OpenBiomechanics Project](https://github.com/drivelineresearch/openbiomechanics) 的動作捕捉資料模擬手機側拍訓練，內嵌於 `index.html`
+- 錨點偵測模型、角度模型：以 [Driveline OpenBiomechanics Project](https://github.com/drivelineresearch/openbiomechanics) 的動作捕捉資料模擬手機側拍訓練，放在 `models/`；開場動畫也使用該資料中的一球
 
 ## 授權
 - 網站程式碼：版權所有，保留一切權利。
-- 內嵌的 AI 模型衍生自 OpenBiomechanics 資料，依 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 授權，僅限非商業用途，衍生作品須以相同授權分享。
+- `models/` 中的 AI 模型與開場動畫資料衍生自 OpenBiomechanics 資料，依 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 授權，僅限非商業用途，衍生作品須以相同授權分享。
