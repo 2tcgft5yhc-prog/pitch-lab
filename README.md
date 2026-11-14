@@ -8,6 +8,15 @@
 - 建議用手機慢動作（240fps）、腳架固定、從側面拍攝。
 - 本工具是動作分析，不是醫療診斷；若投球時疼痛，請找物理治療師或防護員評估。
 
+## 本機啟動
+在專案根目錄執行：
+
+```
+python3 -m http.server 8000
+```
+
+再用瀏覽器開啟 http://localhost:8000 。
+
 ## 使用的模型
 - 姿勢辨識：Google MediaPipe Pose Landmarker
 - 錨點偵測模型、角度模型：以 [Driveline OpenBiomechanics Project](https://github.com/drivelineresearch/openbiomechanics) 的動作捕捉資料模擬手機側拍訓練，放在 `models/`；開場動畫也使用該資料中的一球
