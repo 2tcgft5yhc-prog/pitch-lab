@@ -12,6 +12,15 @@
 - 姿勢辨識：Google MediaPipe Pose Landmarker
 - 錨點偵測模型、角度模型：以 [Driveline OpenBiomechanics Project](https://github.com/drivelineresearch/openbiomechanics) 的動作捕捉資料模擬手機側拍訓練，放在 `models/`；開場動畫也使用該資料中的一球
 
+## 如何執行測試
+測試只使用 Node.js 內建的 `node:test`，不需安裝任何套件（需要 Node.js 18 以上）。在專案根目錄執行：
+
+```
+node --test tests/
+```
+
+測試內容：`index.html` 結構完整、內嵌 JavaScript 沒有語法錯誤，以及球速計算在 0 點、正常值、空值時不會出錯。
+
 ## 授權
 - 網站程式碼：版權所有，保留一切權利。
 - `models/` 中的 AI 模型與開場動畫資料衍生自 OpenBiomechanics 資料，依 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 授權，僅限非商業用途，衍生作品須以相同授權分享。
