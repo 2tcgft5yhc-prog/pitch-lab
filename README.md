@@ -25,7 +25,7 @@ python3 -m http.server 8000
 測試只使用 Node.js 內建的 `node:test`（建議 Node.js 18 以上），不需要 `npm install`。在專案根目錄執行：
 
 ```
-node --test tests/
+node --test tests/*.test.js
 ```
 
 內容包含：`index.html` 結構檢查、行內 JavaScript 語法檢查，以及球速顯示函式在 0、正常值、空值下不會出錯。
